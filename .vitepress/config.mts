@@ -1733,7 +1733,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under open-source software license. Powered by <a href="https://rajeevupadhyay.com" target="_blank" rel="noopener noreferrer">rajeevupadhyay.com</a>',
+      message: 'Released under open-source software license. Powered by <a href="https://wesoftcorp.com" target="_blank" rel="noopener noreferrer">wesoftcorp.com</a>',
       copyright: 'Copyright &copy; 2026 <a href="https://rajeevupadhyay.com" target="_blank" rel="noopener noreferrer">Rajeev Upadhyay</a> | Tradeboard. All rights reserved.'
     }
   }
