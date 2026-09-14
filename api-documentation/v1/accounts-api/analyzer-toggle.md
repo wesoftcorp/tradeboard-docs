@@ -1,0 +1,122 @@
+# AnalyzerToggle
+
+Toggle the analyzer (sandbox) mode on or off.
+
+## Endpoint URL
+
+```http
+Local Host   :  POST http://127.0.0.1:5000/api/v1/analyzer/toggle
+Ngrok Domain :  POST https://<your-ngrok-domain>.ngrok-free.app/api/v1/analyzer/toggle
+Custom Domain:  POST https://<your-custom-domain>/api/v1/analyzer/toggle
+```
+
+## Sample API Request (Enable Analyzer Mode)
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "mode": true
+}
+```
+
+## Sample cURL Request
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/analyzer/toggle \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "apikey": "<your_app_apikey>",
+  "mode": true
+}'
+```
+
+## Sample API Response (Enable)
+
+```json
+{
+  "status": "success",
+  "data": {
+    "analyze_mode": true,
+    "message": "Analyzer mode switched to analyze",
+    "mode": "analyze",
+    "total_logs": 2
+  }
+}
+```
+
+## Sample API Request (Disable Analyzer Mode)
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "mode": false
+}
+```
+
+## Sample API Response (Disable)
+
+```json
+{
+  "status": "success",
+  "data": {
+    "analyze_mode": false,
+    "message": "Analyzer mode switched to live",
+    "mode": "live",
+    "total_logs": 0
+  }
+}
+```
+
+## Request Body
+
+| Parameter | Description | Mandatory/Optional | Default Value |
+|-----------|-------------|-------------------|---------------|
+| apikey | Your Tradeboard API key | Mandatory | - |
+| mode | JSON boolean: `true` to enable analyzer, `false` to disable | Mandatory | - |
+
+`AnalyzerToggleSchema` declares only these two fields and both are required. Any other field returns HTTP 400. `mode` is a boolean field, so the strings `"analyze"` and `"live"` are not accepted as input even though they appear in the response.
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | "success" or "error" |
+| data | object | Toggle result data |
+
+### Data Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| analyze_mode | boolean | Current analyzer mode state |
+| message | string | Confirmation message |
+| mode | string | "analyze" or "live" |
+| total_logs | number | Number of logs in analyzer database |
+
+## Analyzer Mode Features
+
+When analyzer mode is **enabled**:
+
+- Orders are **simulated**, not sent to broker
+- Uses **sandbox capital** (₹1 Crore default)
+- All API responses include `"mode": "analyze"`
+- Order IDs are simulated (prefixed/formatted differently)
+- Positions tracked in separate sandbox database
+- Auto square-off follows exchange timings
+
+## Notes
+
+- **WARNING**: Disabling analyzer mode means orders will be placed with real money
+- Always verify the mode before running automated strategies
+- Analyzer mode is an application-wide setting for this single-user deployment. The API key authenticates the request; it does not create a separate per-key mode.
+- Use [AnalyzerStatus](./analyzer-status.md) to check current mode
+
+## Use Cases
+
+- **Strategy development**: Test without risk
+- **API testing**: Validate integration
+- **Training**: Learn the platform safely
+- **Demo**: Show platform capabilities
+
+---
+
+**Back to**: [API Documentation](../README.md)

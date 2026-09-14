@@ -1,0 +1,124 @@
+# ModifyOrder
+
+Modify an existing open order. You can change price, quantity, trigger price, and other parameters.
+
+## Endpoint URL
+
+```http
+Local Host   :  POST http://127.0.0.1:5000/api/v1/modifyorder
+Ngrok Domain :  POST https://<your-ngrok-domain>.ngrok-free.app/api/v1/modifyorder
+Custom Domain:  POST https://<your-custom-domain>/api/v1/modifyorder
+```
+
+## Sample API Request
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "orderid": "250408001002736",
+  "strategy": "Python",
+  "symbol": "YESBANK",
+  "action": "BUY",
+  "exchange": "NSE",
+  "pricetype": "LIMIT",
+  "product": "CNC",
+  "quantity": 1,
+  "price": 16.5,
+  "trigger_price": 0,
+  "disclosed_quantity": 0
+}
+```
+
+## Sample cURL Request
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/modifyorder \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "apikey": "<your_app_apikey>",
+  "orderid": "250408001002736",
+  "strategy": "Python",
+  "symbol": "YESBANK",
+  "action": "BUY",
+  "exchange": "NSE",
+  "pricetype": "LIMIT",
+  "product": "CNC",
+  "quantity": 1,
+  "price": 16.5,
+  "trigger_price": 0,
+  "disclosed_quantity": 0
+}'
+```
+
+## Sample API Response
+
+```json
+{
+  "orderid": "250408001002736",
+  "status": "success"
+}
+```
+
+## Request Body
+
+| Parameter | Description | Mandatory/Optional | Default Value |
+|-----------|-------------|-------------------|---------------|
+| apikey | Your Tradeboard API key | Mandatory | - |
+| orderid | Order ID to modify | Mandatory | - |
+| strategy | Strategy identifier | Mandatory | - |
+| symbol | Trading symbol | Mandatory | - |
+| action | Order action: BUY or SELL | Mandatory | - |
+| exchange | Any value in the shared `VALID_EXCHANGES` list | Mandatory | - |
+| pricetype | Price type: MARKET, LIMIT, SL, SL-M | Mandatory | - |
+| product | Product type: MIS, CNC, NRML | Mandatory | - |
+| quantity | New order quantity | Mandatory | - |
+| price | New order price | Mandatory | - |
+| trigger_price | New trigger price; send `0` when unused | Mandatory | - |
+| disclosed_quantity | New disclosed quantity; send `0` when unused | Mandatory | - |
+
+All twelve fields are required by `ModifyOrderSchema`, with no defaults, and any other field returns HTTP 400. There is no partial modify: build the full body from the order's current values and change only what you need.
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | "success" or "error" |
+| orderid | string | Modified order ID |
+| message | string | Error message (on failure) |
+| mode | string | `"analyze"` in analyzer mode. The key is **absent** in live mode; there is no `"mode": "live"` |
+
+## What Can Be Modified?
+
+| Parameter | Modifiable | Notes |
+|-----------|------------|-------|
+| Quantity | Yes | Must be valid lot size for F&O |
+| Price | Yes | For LIMIT/SL orders |
+| Trigger Price | Yes | For SL/SL-M orders |
+| Price Type | Varies | Depends on broker support |
+| Product | No | Cannot change MIS to CNC etc. |
+| Symbol | No | Cannot change symbol |
+| Action | No | Cannot change BUY to SELL |
+
+## Notes
+
+- Only **open/pending orders** can be modified
+- Completed, cancelled, or rejected orders cannot be modified
+- Some brokers may have restrictions on modification frequency
+- The order must be in a **modifiable state** (not in transit)
+- If you need to change action (BUY/SELL), cancel and place a new order
+- For F&O orders, ensure the modified quantity is a valid lot size
+- Fractional quantities are accepted only for `CRYPTO`; non-crypto quantities must be whole numbers.
+- `strategy`, `trigger_price`, and `disclosed_quantity` are schema-required even when the broker does not use their values for the requested modification.
+
+## Error Scenarios
+
+| Error | Cause |
+|-------|-------|
+| Order not found | Invalid order ID |
+| Order not modifiable | Order already executed/cancelled |
+| Invalid price | Price out of circuit limits |
+| Invalid quantity | Not a valid lot size for F&O |
+
+---
+
+**Back to**: [API Documentation](../README.md)

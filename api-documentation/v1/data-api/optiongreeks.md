@@ -1,0 +1,141 @@
+# OptionGreeks
+
+Calculate Option Greeks (Delta, Gamma, Theta, Vega, Rho) and Implied Volatility for an option.
+
+## Endpoint URL
+
+```http
+Local Host   :  POST http://127.0.0.1:5000/api/v1/optiongreeks
+Ngrok Domain :  POST https://<your-ngrok-domain>.ngrok-free.app/api/v1/optiongreeks
+Custom Domain:  POST https://<your-custom-domain>/api/v1/optiongreeks
+```
+
+## Sample API Request
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "symbol": "NIFTY25NOV2526000CE",
+  "exchange": "NFO",
+  "interest_rate": 0.00,
+  "underlying_symbol": "NIFTY",
+  "underlying_exchange": "NSE_INDEX"
+}
+```
+
+## Sample cURL Request
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/optiongreeks \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "apikey": "<your_app_apikey>",
+  "symbol": "NIFTY25NOV2526000CE",
+  "exchange": "NFO",
+  "interest_rate": 0.00,
+  "underlying_symbol": "NIFTY",
+  "underlying_exchange": "NSE_INDEX"
+}'
+```
+
+## Sample API Response
+
+```json
+{
+  "status": "success",
+  "symbol": "NIFTY25NOV2526000CE",
+  "exchange": "NFO",
+  "underlying": "NIFTY",
+  "strike": 26000.0,
+  "option_type": "CE",
+  "expiry_date": "25-Nov-2025",
+  "days_to_expiry": 28.5071,
+  "spot_price": 25966.05,
+  "option_price": 435,
+  "interest_rate": 0.0,
+  "implied_volatility": 15.6,
+  "greeks": {
+    "delta": 0.4967,
+    "gamma": 0.000352,
+    "theta": -7.919,
+    "vega": 28.9489,
+    "rho": 9.733994
+  }
+}
+```
+
+## Request Body
+
+| Parameter | Description | Mandatory/Optional | Default Value |
+|-----------|-------------|-------------------|---------------|
+| apikey | Your Tradeboard API key | Mandatory | - |
+| symbol | Option symbol | Mandatory | - |
+| exchange | Derivatives exchange: NFO, BFO, MCX, CDS, NCO, BCD, NCDEX, CRYPTO | Mandatory | - |
+| interest_rate | Risk-free interest rate as an annualized percentage, 0 to 100 | Optional | `0` |
+| forward_price | Custom forward or synthetic futures price, non-negative. When supplied, the underlying price fetch is skipped | Optional | Resolved automatically |
+| underlying_symbol | Underlying symbol for the reference price (e.g., `NIFTY` or `NIFTY28NOV24FUT`) | Optional | Derived from the option symbol |
+| underlying_exchange | Underlying exchange (e.g., `NSE_INDEX`, `NFO`). Not enum-validated | Optional | Derived from the option symbol |
+| expiry_time | Custom expiry time in `HH:MM` format (e.g., `15:30`, `19:00`) | Optional | Exchange default cut-off |
+
+The per-exchange default interest rate is currently `0` for every exchange: the platform deliberately does not assume a rate. Supply `interest_rate` explicitly if you want rho and the rate-sensitive part of the model to be meaningful.
+
+These eight fields are the complete `OptionGreeksSchema`. Any other field returns HTTP 400. `exchange` is validated against the derivatives list, so cash and index exchanges are rejected here.
+
+This endpoint uses `GREEKS_RATE_LIMIT`, whose in-code fallback is 30 per minute, rather than the shared `API_RATE_LIMIT`.
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | "success" or "error" |
+| symbol | string | Option symbol |
+| exchange | string | Exchange |
+| underlying | string | Underlying symbol |
+| strike | number | Strike price |
+| option_type | string | CE or PE |
+| expiry_date | string | Expiry date |
+| days_to_expiry | number | Days remaining to expiry (fractional) |
+| spot_price | number | Current spot/underlying price |
+| option_price | number | Current option LTP |
+| interest_rate | number | Risk-free rate used |
+| implied_volatility | number | Calculated IV (%) |
+| greeks | object | Greeks values |
+
+### Greeks Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| delta | number | Price sensitivity to underlying movement |
+| gamma | number | Delta sensitivity to underlying movement |
+| theta | number | Time decay per day (negative) |
+| vega | number | Price sensitivity to 1% IV change |
+| rho | number | Price sensitivity to 1% interest rate change |
+
+## Understanding Option Greeks
+
+| Greek | Description | Typical Range |
+|-------|-------------|---------------|
+| **Delta** | How much option price moves for ₹1 underlying move | CE: 0 to 1, PE: -1 to 0 |
+| **Gamma** | Rate of change of delta | Higher near ATM |
+| **Theta** | Daily time decay (negative for buyers) | Increases near expiry |
+| **Vega** | Price change for 1% IV move | Higher for longer expiry |
+| **Rho** | Price change for 1% interest rate move | Usually small |
+
+## Notes
+
+- Uses the **Black-76 model**. For F&O contracts the service attempts to resolve a per-expiry synthetic future as the forward and falls back to the underlying quote when a synthetic forward cannot be computed.
+- **Implied Volatility** is calculated using Newton-Raphson method
+- For **deep ITM** options with no time value, returns theoretical Greeks (delta = ±1)
+- **days_to_expiry** includes fractional days for accuracy
+- `forward_price` bypasses automatic forward resolution. `underlying_symbol` and `underlying_exchange` override automatic underlying lookup.
+
+## Use Cases
+
+- **Position sizing**: Use delta for hedge ratios
+- **Risk management**: Monitor gamma exposure
+- **Time decay analysis**: Track theta decay
+- **Volatility trading**: Monitor vega exposure
+
+---
+
+**Back to**: [API Documentation](../README.md)

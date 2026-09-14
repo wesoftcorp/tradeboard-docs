@@ -1,0 +1,1903 @@
+# .NET
+
+## Tradeboard.NET
+
+Tradeboard.NET SDK for algorithmic trading - C# client for Tradeboard API
+
+### Installation
+
+To install the Tradeboard.NET library, use NuGet:
+
+```bash
+dotnet add package Tradeboard.NET
+```
+
+Or via Package Manager:
+
+```powershell
+Install-Package Tradeboard.NET
+```
+
+### Compatibility
+
+| Framework | Version | Support                               |
+| --------- | ------- | ------------------------------------- |
+| .NET      | 6.0     | LTS (Long Term Support)               |
+| .NET      | 7.0     | STS (Standard Term Support)           |
+| .NET      | 8.0     | LTS (Long Term Support) - Recommended |
+
+The SDK is built using only built-in .NET libraries with no external dependencies.
+
+### Get the Tradeboard apikey
+
+Make Sure that your Tradeboard Application is running. Login to Tradeboard Application with valid credentials and get the Tradeboard apikey
+
+For detailed function parameters refer to the [API Documentation](https://docs.algo.wesoftcorp.com/api-documentation/v1)
+
+### Getting Started with Tradeboard.NET
+
+First, import the `Api` class from the Tradeboard.NET library and initialize it with your API key:
+
+```csharp
+using Tradeboard.NET;
+
+// Replace 'your_api_key_here' with your actual API key
+// Specify the host URL with your hosted domain or ngrok domain.
+// If running locally in windows then use the default host value.
+var client = new Api(apiKey: "your_api_key_here", host: "http://127.0.0.1:5000");
+```
+
+### Examples
+
+Please refer to the documentation on [order constants](https://docs.algo.wesoftcorp.com/api-documentation/v1/order-constants), and consult the API reference for details on optional parameters
+
+***
+
+## Sync API Reference
+
+### PlaceOrder example
+
+To place a new market order:
+
+```csharp
+var response = client.PlaceOrder(
+    strategy: "Python",
+    symbol: "NHPC",
+    action: "BUY",
+    exchange: "NSE",
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+Place Market Order Response
+
+```
+Status: success
+OrderId: 250408000989443
+```
+
+To place a new limit order:
+
+```csharp
+var response = client.PlaceOrder(
+    strategy: "Python",
+    symbol: "YESBANK",
+    action: "BUY",
+    exchange: "NSE",
+    priceType: "LIMIT",
+    product: "CNC",
+    quantity: 1,
+    price: "16",
+    triggerPrice: "0",
+    disclosedQuantity: "0"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+Place Limit Order Response
+
+```
+Status: success
+OrderId: 250408001003813
+```
+
+### PlaceSmartOrder Example
+
+To place a smart order considering the current position size:
+
+```csharp
+var response = client.PlaceSmartOrder(
+    strategy: "Python",
+    symbol: "TATAMOTORS",
+    action: "SELL",
+    exchange: "NSE",
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1,
+    positionSize: 5
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+Place Smart Market Order Response
+
+```
+Status: success
+OrderId: 250408000997543
+```
+
+### OptionsOrder Example
+
+To place ATM options order
+
+```csharp
+var response = client.OptionsOrder(
+    strategy: "python",
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "ATM",
+    optionType: "CE",
+    action: "BUY",
+    quantity: 75,
+    priceType: "MARKET",
+    product: "NRML",
+    splitsize: 0
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+Console.WriteLine($"Exchange: {response.Exchange}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+```
+
+Place Options Order Response
+
+```
+Status: success
+OrderId: 25102800000006
+Symbol: NIFTY30DEC2526200CE
+Exchange: NFO
+Underlying LTP: 26215.55
+```
+
+To place ITM options order
+
+```csharp
+var response = client.OptionsOrder(
+    strategy: "python",
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "ITM4",
+    optionType: "PE",
+    action: "BUY",
+    quantity: 75,
+    priceType: "MARKET",
+    product: "NRML",
+    splitsize: 0
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+```
+
+Place Options Order Response
+
+```
+Status: success
+OrderId: 25102800000007
+Symbol: NIFTY30DEC2526150PE
+```
+
+To place OTM options order
+
+```csharp
+var response = client.OptionsOrder(
+    strategy: "python",
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "OTM5",
+    optionType: "CE",
+    action: "BUY",
+    quantity: 75,
+    priceType: "MARKET",
+    product: "NRML",
+    splitsize: 0
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+```
+
+Place Options Order Response
+
+```
+Status: success
+OrderId: 25102800000008
+Symbol: NIFTY30DEC2526200CE
+```
+
+### OptionsMultiOrder Example
+
+To place Iron Condor options order (Same Expiry)
+
+```csharp
+var response = client.OptionsMultiOrder(
+    strategy: "Iron Condor Test",
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "25NOV25",
+    legs: new List<OptionLeg>
+    {
+        new OptionLeg { Offset = "OTM6", OptionType = "CE", Action = "BUY", Quantity = 75 },
+        new OptionLeg { Offset = "OTM6", OptionType = "PE", Action = "BUY", Quantity = 75 },
+        new OptionLeg { Offset = "OTM4", OptionType = "CE", Action = "SELL", Quantity = 75 },
+        new OptionLeg { Offset = "OTM4", OptionType = "PE", Action = "SELL", Quantity = 75 }
+    }
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Underlying: {response.Underlying}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+if (response.Results != null)
+{
+    foreach (var leg in response.Results)
+    {
+        Console.WriteLine($"Leg {leg.Leg}: {leg.Action} {leg.Symbol} - {leg.Status} (OrderId: {leg.OrderId})");
+    }
+}
+```
+
+**OptionsMultiOrder Response**
+
+```
+Status: success
+Underlying: NIFTY
+Underlying LTP: 26050.45
+Leg 1: BUY NIFTY25NOV2526350CE - success (OrderId: 25111996859688)
+Leg 2: BUY NIFTY25NOV2525750PE - success (OrderId: 25111996042210)
+Leg 3: SELL NIFTY25NOV2526250CE - success (OrderId: 25111922189638)
+Leg 4: SELL NIFTY25NOV2525850PE - success (OrderId: 25111919252668)
+```
+
+To place Diagonal Spread options order (Different Expiry)
+
+```csharp
+var response = client.OptionsMultiOrder(
+    strategy: "Diagonal Spread Test",
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    legs: new List<OptionLeg>
+    {
+        new OptionLeg { Offset = "ITM2", OptionType = "CE", Action = "BUY", Quantity = 75, ExpiryDate = "30DEC25" },
+        new OptionLeg { Offset = "OTM2", OptionType = "CE", Action = "SELL", Quantity = 75, ExpiryDate = "25NOV25" }
+    }
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Underlying: {response.Underlying}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+if (response.Results != null)
+{
+    foreach (var leg in response.Results)
+    {
+        Console.WriteLine($"Leg {leg.Leg}: {leg.Action} {leg.Symbol} - {leg.Status} (OrderId: {leg.OrderId})");
+    }
+}
+```
+
+**OptionsMultiOrder Response**
+
+```
+Status: success
+Underlying: NIFTY
+Underlying LTP: 26052.65
+Leg 1: BUY NIFTY30DEC2525950CE - success (OrderId: 25111933337854)
+Leg 2: SELL NIFTY25NOV2526150CE - success (OrderId: 25111957475473)
+```
+
+### BasketOrder example
+
+To place a new basket order:
+
+```csharp
+var basketOrders = new List<BasketOrderItem>
+{
+    new BasketOrderItem
+    {
+        Symbol = "BHEL",
+        Exchange = "NSE",
+        Action = "BUY",
+        Quantity = 1,
+        PriceType = "MARKET",
+        Product = "MIS"
+    },
+    new BasketOrderItem
+    {
+        Symbol = "ZOMATO",
+        Exchange = "NSE",
+        Action = "SELL",
+        Quantity = 1,
+        PriceType = "MARKET",
+        Product = "MIS"
+    }
+};
+var response = client.BasketOrder(orders: basketOrders);
+Console.WriteLine($"Status: {response.Status}");
+if (response.Results != null)
+{
+    foreach (var result in response.Results)
+    {
+        Console.WriteLine($"  {result.Symbol}: {result.Status} (OrderId: {result.OrderId})");
+    }
+}
+```
+
+**Basket Order Response**
+
+```
+Status: success
+  BHEL: success (OrderId: 250408000999544)
+  ZOMATO: success (OrderId: 250408000997545)
+```
+
+### SplitOrder example
+
+To place a new split order:
+
+```csharp
+var response = client.SplitOrder(
+    symbol: "YESBANK",
+    exchange: "NSE",
+    action: "SELL",
+    quantity: 105,
+    splitsize: 20,
+    priceType: "MARKET",
+    product: "MIS"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Split Size: {response.SplitSize}");
+Console.WriteLine($"Total Quantity: {response.TotalQuantity}");
+if (response.Results != null)
+{
+    foreach (var result in response.Results)
+    {
+        Console.WriteLine($"  Order {result.OrderNum}: Qty {result.Quantity} - {result.Status} (OrderId: {result.OrderId})");
+    }
+}
+```
+
+**SplitOrder Response**
+
+```
+Status: success
+Split Size: 20
+Total Quantity: 105
+  Order 1: Qty 20 - success (OrderId: 250408001021467)
+  Order 2: Qty 20 - success (OrderId: 250408001021459)
+  Order 3: Qty 20 - success (OrderId: 250408001021466)
+  Order 4: Qty 20 - success (OrderId: 250408001021470)
+  Order 5: Qty 20 - success (OrderId: 250408001021471)
+  Order 6: Qty 5 - success (OrderId: 250408001021472)
+```
+
+### ModifyOrder Example
+
+To modify an existing order:
+
+```csharp
+var response = client.ModifyOrder(
+    orderId: "250408001002736",
+    strategy: "Python",
+    symbol: "YESBANK",
+    action: "BUY",
+    exchange: "NSE",
+    priceType: "LIMIT",
+    product: "CNC",
+    quantity: 1,
+    price: "16.5"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+**Modify Order Response**
+
+```
+Status: success
+OrderId: 250408001002736
+```
+
+### CancelOrder Example
+
+To cancel an existing order:
+
+```csharp
+var response = client.CancelOrder(
+    orderId: "250408001002736",
+    strategy: "Python"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+**CancelOrder Response**
+
+```
+Status: success
+OrderId: 250408001002736
+```
+
+### CancelAllOrder Example
+
+To cancel all open orders and trigger pending orders
+
+```csharp
+var response = client.CancelAllOrder(
+    strategy: "Python"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+if (response.CanceledOrders != null)
+{
+    Console.WriteLine($"Canceled Orders: {string.Join(", ", response.CanceledOrders)}");
+}
+```
+
+**CancelAllOrder Response**
+
+```
+Status: success
+Message: Canceled 5 orders. Failed to cancel 0 orders.
+Canceled Orders: 250408001042620, 250408001042667, 250408001042642, 250408001043015, 250408001043386
+```
+
+### ClosePosition Example
+
+To close all open positions across various exchanges
+
+```csharp
+var response = client.ClosePosition(
+    strategy: "Python"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+```
+
+**ClosePosition Response**
+
+```
+Status: success
+Message: All Open Positions Squared Off
+```
+
+### OrderStatus Example
+
+To Get the Current OrderStatus
+
+```csharp
+var response = client.OrderStatus(
+    orderId: "250828000185002",
+    strategy: "Test Strategy"
+);
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Action: {response.Data.Action}");
+    Console.WriteLine($"Symbol: {response.Data.Symbol}");
+    Console.WriteLine($"Exchange: {response.Data.Exchange}");
+    Console.WriteLine($"Order Status: {response.Data.OrderStatus}");
+    Console.WriteLine($"OrderId: {response.Data.OrderId}");
+    Console.WriteLine($"Quantity: {response.Data.Quantity}");
+    Console.WriteLine($"Average Price: {response.Data.AveragePrice}");
+    Console.WriteLine($"Timestamp: {response.Data.Timestamp}");
+}
+```
+
+**OrderStatus Response**
+
+```
+Status: success
+Action: BUY
+Symbol: YESBANK
+Exchange: NSE
+Order Status: complete
+OrderId: 250828000185002
+Quantity: 1
+Average Price: 18.95
+Timestamp: 28-Aug-2025 09:59:10
+```
+
+### OpenPosition Example
+
+To Get the Current OpenPosition
+
+```csharp
+var response = client.OpenPosition(
+    strategy: "Test Strategy",
+    symbol: "YESBANK",
+    exchange: "NSE",
+    product: "MIS"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Quantity: {response.Quantity}");
+```
+
+**OpenPosition Response**
+
+```
+Status: success
+Quantity: -10
+```
+
+### Quotes Example
+
+```csharp
+var response = client.Quotes(symbol: "RELIANCE", exchange: "NSE");
+Console.WriteLine($"Status: {response.Status}");
+if (response.IsSuccess && response.Data != null)
+{
+    Console.WriteLine($"Open: {response.Data.Open}");
+    Console.WriteLine($"High: {response.Data.High}");
+    Console.WriteLine($"Low: {response.Data.Low}");
+    Console.WriteLine($"LTP: {response.Data.Ltp}");
+    Console.WriteLine($"Ask: {response.Data.Ask}");
+    Console.WriteLine($"Bid: {response.Data.Bid}");
+    Console.WriteLine($"Prev Close: {response.Data.PrevClose}");
+    Console.WriteLine($"Volume: {response.Data.Volume}");
+}
+```
+
+**Quotes response**
+
+```
+Status: success
+Open: 1223.05
+High: 1231.4
+Low: 1214.15
+LTP: 1217.15
+Ask: 1217.15
+Bid: 1217.1
+Prev Close: 1222.55
+Volume: 4893109
+```
+
+### MultiQuotes Example
+
+```csharp
+var response = client.MultiQuotes(symbols: new List<SymbolExchangePair>
+{
+    new SymbolExchangePair { Symbol = "RELIANCE", Exchange = "NSE" },
+    new SymbolExchangePair { Symbol = "TCS", Exchange = "NSE" },
+    new SymbolExchangePair { Symbol = "INFY", Exchange = "NSE" }
+});
+Console.WriteLine($"Status: {response.Status}");
+if (response.Results != null)
+{
+    foreach (var result in response.Results)
+    {
+        Console.WriteLine($"\n{result.Symbol} ({result.Exchange}):");
+        if (result.Data != null)
+        {
+            Console.WriteLine($"  Open: {result.Data.Open}");
+            Console.WriteLine($"  High: {result.Data.High}");
+            Console.WriteLine($"  Low: {result.Data.Low}");
+            Console.WriteLine($"  LTP: {result.Data.Ltp}");
+            Console.WriteLine($"  Volume: {result.Data.Volume}");
+        }
+    }
+}
+```
+
+**MultiQuotes Response**
+
+```
+Status: success
+
+RELIANCE (NSE):
+  Open: 1542.3
+  High: 1571.6
+  Low: 1540.5
+  LTP: 1569.9
+  Volume: 14054299
+
+TCS (NSE):
+  Open: 3118.8
+  High: 3178
+  Low: 3117
+  LTP: 3162.9
+  Volume: 2508527
+
+INFY (NSE):
+  Open: 1532.1
+  High: 1560.3
+  Low: 1532.1
+  LTP: 1557.9
+  Volume: 7575038
+```
+
+### Depth Example
+
+```csharp
+var response = client.Depth(symbol: "SBIN", exchange: "NSE");
+Console.WriteLine($"Status: {response.Status}");
+if (response.IsSuccess && response.Data != null)
+{
+    Console.WriteLine($"LTP: {response.Data.Ltp}");
+    Console.WriteLine($"Open: {response.Data.Open}");
+    Console.WriteLine($"High: {response.Data.High}");
+    Console.WriteLine($"Low: {response.Data.Low}");
+    Console.WriteLine($"Volume: {response.Data.Volume}");
+    Console.WriteLine($"Total Buy Qty: {response.Data.TotalBuyQty}");
+    Console.WriteLine($"Total Sell Qty: {response.Data.TotalSellQty}");
+
+    Console.WriteLine("\nTop 5 Bids:");
+    foreach (var bid in response.Data.Bids.Take(5))
+        Console.WriteLine($"  {bid.Price} x {bid.Quantity}");
+
+    Console.WriteLine("\nTop 5 Asks:");
+    foreach (var ask in response.Data.Asks.Take(5))
+        Console.WriteLine($"  {ask.Price} x {ask.Quantity}");
+}
+```
+
+**Depth Response**
+
+```
+Status: success
+LTP: 827.45
+Open: 825.00
+High: 829.35
+Low: 824.55
+Volume: 9362799
+Total Buy Qty: 591351
+Total Sell Qty: 835701
+
+Top 5 Bids:
+  827.40 x 886
+  827.35 x 212
+  827.30 x 351
+  827.25 x 343
+  827.20 x 399
+
+Top 5 Asks:
+  827.45 x 767
+  827.50 x 115
+  827.55 x 162
+  827.60 x 1121
+  827.65 x 430
+```
+
+### History Example
+
+```csharp
+var response = client.History(
+    symbol: "SBIN",
+    exchange: "NSE",
+    interval: "5m",
+    startDate: "2025-12-20",
+    endDate: "2025-12-22",
+    source: "api"      // "api" (broker, default) or "db" (local DuckDB store)
+);
+Console.WriteLine($"Status: {response.Status}");
+if (response.IsSuccess && response.Data != null)
+{
+    Console.WriteLine($"Total Candles: {response.Data.Count}\n");
+    Console.WriteLine($"{"Timestamp",-22} {"Open",10} {"High",10} {"Low",10} {"Close",10} {"Volume",12}");
+    Console.WriteLine(new string('-', 80));
+    foreach (var candle in response.Data.Take(5))
+    {
+        Console.WriteLine($"{candle.Timestamp,-22} {candle.Open,10:F2} {candle.High,10:F2} {candle.Low,10:F2} {candle.Close,10:F2} {candle.Volume,12}");
+    }
+}
+```
+
+**History Response**
+
+```
+Status: success
+Total Candles: 150
+
+Timestamp                    Open       High        Low      Close       Volume
+--------------------------------------------------------------------------------
+2025-12-20 09:15:00       827.00     829.35     824.55     826.45       524631
+2025-12-20 09:20:00       826.45     827.95     825.50     826.10       198234
+2025-12-20 09:25:00       826.05     827.40     825.75     827.20       145892
+2025-12-20 09:30:00       827.20     828.00     826.50     827.65       112456
+2025-12-20 09:35:00       827.70     828.50     827.00     828.15        98234
+```
+
+### Intervals Example
+
+```csharp
+var response = client.Intervals();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Days: {string.Join(", ", response.Data.Days ?? new List<string>())}");
+    Console.WriteLine($"Hours: {string.Join(", ", response.Data.Hours ?? new List<string>())}");
+    Console.WriteLine($"Minutes: {string.Join(", ", response.Data.Minutes ?? new List<string>())}");
+}
+```
+
+**Intervals Response**
+
+```
+Status: success
+Days: D
+Hours: 1h
+Minutes: 10m, 15m, 1m, 30m, 3m, 5m
+```
+
+`intervals` reports only what the connected broker supports. The `interval` field of `/history` accepts this full set, and rejects anything else: `1s`, `5s`, `10s`, `15s`, `30s`, `45s`, `1m`, `2m`, `3m`, `5m`, `10m`, `15m`, `20m`, `30m`, `1h`, `2h`, `3h`, `4h`, `D`, `W`, `M`, `Q`, `Y`.
+
+### OptionChain Example
+
+Note : To fetch entire option chain for a expiry remove the strikeCount (optional) parameter
+
+```csharp
+var response = client.OptionChain(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    strikeCount: 10
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Underlying: {response.Underlying}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+Console.WriteLine($"ATM Strike: {response.AtmStrike}");
+if (response.Chain != null)
+{
+    Console.WriteLine("\nOption Chain:");
+    foreach (var strike in response.Chain.Take(2))
+    {
+        Console.WriteLine($"\nStrike: {strike.Strike}");
+        if (strike.Ce != null)
+            Console.WriteLine($"  CE: {strike.Ce.Symbol} ({strike.Ce.Label}) LTP: {strike.Ce.Ltp}");
+        if (strike.Pe != null)
+            Console.WriteLine($"  PE: {strike.Pe.Symbol} ({strike.Pe.Label}) LTP: {strike.Pe.Ltp}");
+    }
+}
+```
+
+**OptionChain Response**
+
+```
+Status: success
+Underlying: NIFTY
+Underlying LTP: 26215.55
+ATM Strike: 26200
+
+Option Chain:
+
+Strike: 26100
+  CE: NIFTY30DEC2526100CE (ITM2) LTP: 490
+  PE: NIFTY30DEC2526100PE (OTM2) LTP: 193
+
+Strike: 26200
+  CE: NIFTY30DEC2526200CE (ATM) LTP: 427
+  PE: NIFTY30DEC2526200PE (ATM) LTP: 227.4
+```
+
+### Symbol Example
+
+```csharp
+var response = client.Symbol(
+    symbol: "NIFTY30DEC25FUT",
+    exchange: "NFO"
+);
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Symbol: {response.Data.Symbol}");
+    Console.WriteLine($"Name: {response.Data.Name}");
+    Console.WriteLine($"Exchange: {response.Data.Exchange}");
+    Console.WriteLine($"Instrument Type: {response.Data.InstrumentType}");
+    Console.WriteLine($"Lot Size: {response.Data.LotSize}");
+    Console.WriteLine($"Expiry: {response.Data.Expiry}");
+    Console.WriteLine($"Freeze Qty: {response.Data.FreezeQty}");
+}
+```
+
+**Symbol Response**
+
+```
+Status: success
+Symbol: NIFTY30DEC25FUT
+Name: NIFTY
+Exchange: NFO
+Instrument Type: FUT
+Lot Size: 75
+Expiry: 30-DEC-25
+Freeze Qty: 1800
+```
+
+### Search Example
+
+```csharp
+var response = client.Search(query: "NIFTY 26000 DEC CE", exchange: "NFO");
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+if (response.Data != null)
+{
+    foreach (var symbol in response.Data.Take(2))
+    {
+        Console.WriteLine($"\n  Symbol: {symbol.Symbol}");
+        Console.WriteLine($"  Exchange: {symbol.Exchange}");
+        Console.WriteLine($"  Expiry: {symbol.Expiry}");
+        Console.WriteLine($"  Lot Size: {symbol.LotSize}");
+    }
+}
+```
+
+**Search Response**
+
+```
+Status: success
+Message: Found 7 matching symbols
+
+  Symbol: NIFTY30DEC2526000CE
+  Exchange: NFO
+  Expiry: 30-DEC-25
+  Lot Size: 75
+
+  Symbol: NIFTY29DEC2626000CE
+  Exchange: NFO
+  Expiry: 29-DEC-26
+  Lot Size: 75
+```
+
+### OptionSymbol Example
+
+ATM Option
+
+```csharp
+var response = client.OptionSymbol(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "ATM",
+    optionType: "CE"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+Console.WriteLine($"Exchange: {response.Exchange}");
+Console.WriteLine($"Lot Size: {response.LotSize}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+```
+
+**OptionSymbol Response**
+
+```
+Status: success
+Symbol: NIFTY30DEC2525950CE
+Exchange: NFO
+Lot Size: 75
+Underlying LTP: 25966.4
+```
+
+ITM Option
+
+```csharp
+var response = client.OptionSymbol(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "ITM3",
+    optionType: "PE"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+Console.WriteLine($"Exchange: {response.Exchange}");
+Console.WriteLine($"Lot Size: {response.LotSize}");
+```
+
+**OptionSymbol Response**
+
+```
+Status: success
+Symbol: NIFTY30DEC2526100PE
+Exchange: NFO
+Lot Size: 75
+```
+
+OTM Option
+
+```csharp
+var response = client.OptionSymbol(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "OTM4",
+    optionType: "CE"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+Console.WriteLine($"Exchange: {response.Exchange}");
+Console.WriteLine($"Lot Size: {response.LotSize}");
+```
+
+**OptionSymbol Response**
+
+```
+Status: success
+Symbol: NIFTY30DEC2526150CE
+Exchange: NFO
+Lot Size: 75
+```
+
+### SyntheticFuture Example
+
+```csharp
+var response = client.SyntheticFuture(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "25NOV25"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Underlying: {response.Underlying}");
+Console.WriteLine($"Underlying LTP: {response.UnderlyingLtp}");
+Console.WriteLine($"ATM Strike: {response.AtmStrike}");
+Console.WriteLine($"Synthetic Future Price: {response.SyntheticFuturePrice}");
+Console.WriteLine($"Expiry: {response.Expiry}");
+```
+
+**SyntheticFuture Response**
+
+```
+Status: success
+Underlying: NIFTY
+Underlying LTP: 25910.05
+ATM Strike: 25900
+Synthetic Future Price: 25980.05
+Expiry: 25NOV25
+```
+
+### OptionGreeks Example
+
+```csharp
+var response = client.OptionGreeks(
+    symbol: "NIFTY25NOV2526000CE",
+    exchange: "NFO",
+    interestRate: 0.00m,
+    underlyingSymbol: "NIFTY",
+    underlyingExchange: "NSE_INDEX"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Symbol: {response.Symbol}");
+Console.WriteLine($"Spot Price: {response.SpotPrice}");
+Console.WriteLine($"Option Price: {response.OptionPrice}");
+Console.WriteLine($"IV: {response.ImpliedVolatility}%");
+Console.WriteLine($"Days to Expiry: {response.DaysToExpiry:F2}");
+if (response.Greeks != null)
+{
+    Console.WriteLine($"Delta: {response.Greeks.Delta}");
+    Console.WriteLine($"Gamma: {response.Greeks.Gamma}");
+    Console.WriteLine($"Theta: {response.Greeks.Theta}");
+    Console.WriteLine($"Vega: {response.Greeks.Vega}");
+}
+```
+
+**OptionGreeks Response**
+
+```
+Status: success
+Symbol: NIFTY25NOV2526000CE
+Spot Price: 25966.05
+Option Price: 435
+IV: 15.6%
+Days to Expiry: 28.51
+Delta: 0.4967
+Gamma: 0.000352
+Theta: -7.919
+Vega: 28.9489
+```
+
+### Expiry Example
+
+```csharp
+var response = client.Expiry(
+    symbol: "NIFTY",
+    exchange: "NFO",
+    instrumenttype: "options"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Expiry Dates ({response.Data.Count}):");
+    foreach (var expiry in response.Data.Take(5))
+    {
+        Console.WriteLine($"  {expiry}");
+    }
+    if (response.Data.Count > 5)
+        Console.WriteLine("  ...");
+}
+```
+
+**Expiry Response**
+
+```
+Status: success
+Message: Found 18 expiry dates for NIFTY options in NFO
+Expiry Dates (18):
+  10-JUL-25
+  17-JUL-25
+  24-JUL-25
+  31-JUL-25
+  07-AUG-25
+  ...
+```
+
+### Instruments Example
+
+```csharp
+var response = client.Instruments(exchange: "NSE");
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Total Instruments: {response.Data.Count}");
+    foreach (var inst in response.Data.Take(3))
+    {
+        Console.WriteLine($"\n  Symbol: {inst.Symbol}");
+        Console.WriteLine($"  Name: {inst.Name}");
+        Console.WriteLine($"  Exchange: {inst.Exchange}");
+        Console.WriteLine($"  Lot Size: {inst.LotSize}");
+    }
+}
+```
+
+`/instruments` is the one v1 market-data endpoint that is a GET rather than a POST. It takes `apikey`, an optional `exchange` and an optional `format` (`json` or `csv`) as query parameters, and the SDK issues that GET for you. Omitting `exchange` makes the SDK loop over every supported exchange and combine the results client-side.
+
+**Instruments Response**
+
+```
+Status: success
+Total Instruments: 2500
+
+  Symbol: NEOGEN
+  Name: NEOGEN CHEMICALS LIMITED
+  Exchange: NSE
+  Lot Size: 1
+
+  Symbol: ALANKIT
+  Name: ALANKIT LIMITED
+  Exchange: NSE
+  Lot Size: 1
+
+  Symbol: EVERESTIND
+  Name: EVEREST INDUSTRIES LTD
+  Exchange: NSE
+  Lot Size: 1
+```
+
+### Telegram Alert Example
+
+```csharp
+var response = client.Telegram(
+    username: "<tradeboard_loginid>",
+    message: "NIFTY crossed 26000!"
+);
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+```
+
+**Telegram Alert Response**
+
+```
+Status: success
+Message: Notification sent successfully
+```
+
+### Funds Example
+
+```csharp
+var response = client.Funds();
+Console.WriteLine($"Status: {response.Status}");
+if (response.IsSuccess && response.Data != null)
+{
+    Console.WriteLine($"Available Cash: {response.Data.AvailableCash}");
+    Console.WriteLine($"Collateral: {response.Data.Collateral}");
+    Console.WriteLine($"M2M Realized: {response.Data.M2MRealized}");
+    Console.WriteLine($"M2M Unrealized: {response.Data.M2MUnrealized}");
+    Console.WriteLine($"Utilised Debits: {response.Data.UtilisedDebits}");
+}
+```
+
+**Funds Response**
+
+```
+Status: success
+Available Cash: 320.66
+Collateral: 0.00
+M2M Realized: 3.27
+M2M Unrealized: -7.88
+Utilised Debits: 679.34
+```
+
+### Margin Example
+
+```csharp
+var response = client.Margin(positions: new List<MarginPosition>
+{
+    new MarginPosition
+    {
+        Symbol = "NIFTY25NOV2525000CE",
+        Exchange = "NFO",
+        Action = "BUY",
+        Product = "NRML",
+        PriceType = "MARKET",
+        Quantity = "75"
+    },
+    new MarginPosition
+    {
+        Symbol = "NIFTY25NOV2525500CE",
+        Exchange = "NFO",
+        Action = "SELL",
+        Product = "NRML",
+        PriceType = "MARKET",
+        Quantity = "75"
+    }
+});
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Total Margin Required: {response.Data.TotalMarginRequired}");
+    Console.WriteLine($"SPAN Margin: {response.Data.SpanMargin}");
+    Console.WriteLine($"Exposure Margin: {response.Data.ExposureMargin}");
+}
+```
+
+**Margin Response**
+
+```
+Status: success
+Total Margin Required: 91555.76
+SPAN Margin: 0
+Exposure Margin: 91555.76
+```
+
+### OrderBook Example
+
+```csharp
+var response = client.OrderBook();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"\nOrders:");
+    foreach (var order in response.Data.Orders?.Take(2) ?? Enumerable.Empty<OrderBookEntry>())
+    {
+        Console.WriteLine($"  {order.Action} {order.Symbol} | {order.OrderStatus} | OrderId: {order.OrderId}");
+    }
+    if (response.Data.Statistics != null)
+    {
+        Console.WriteLine($"\nStatistics:");
+        Console.WriteLine($"  Total Buy Orders: {response.Data.Statistics.TotalBuyOrders}");
+        Console.WriteLine($"  Total Completed: {response.Data.Statistics.TotalCompletedOrders}");
+    }
+}
+```
+
+**OrderBook Response**
+
+```
+Status: success
+
+Orders:
+  BUY RELIANCE | complete | OrderId: 250408000989443
+  BUY YESBANK | cancelled | OrderId: 250408001002736
+
+Statistics:
+  Total Buy Orders: 2
+  Total Completed: 1
+```
+
+### TradeBook Example
+
+```csharp
+var response = client.TradeBook();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"\nTrades:");
+    foreach (var trade in response.Data.Take(2))
+    {
+        Console.WriteLine($"  {trade.Action} {trade.Symbol} @ {trade.AveragePrice} | Value: {trade.TradeValue}");
+    }
+}
+```
+
+**TradeBook Response**
+
+```
+Status: success
+
+Trades:
+  BUY RELIANCE @ 1180.1 | Value: 1180.1
+  SELL NHPC @ 83.74 | Value: 83.74
+```
+
+### PositionBook Example
+
+```csharp
+var response = client.PositionBook();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"\nPositions:");
+    foreach (var pos in response.Data)
+    {
+        Console.WriteLine($"  {pos.Symbol} | Qty: {pos.Quantity} | LTP: {pos.Ltp} | PnL: {pos.Pnl}");
+    }
+}
+```
+
+**PositionBook Response**
+
+```
+Status: success
+
+Positions:
+  NHPC | Qty: -1 | LTP: 83.72 | PnL: 0.02
+  RELIANCE | Qty: 0 | LTP: 1189.9 | PnL: 5.90
+  YESBANK | Qty: -104 | LTP: 17.31 | PnL: -10.44
+```
+
+### Holdings Example
+
+```csharp
+var response = client.Holdings();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"\nHoldings:");
+    foreach (var holding in response.Data.Holdings ?? new List<HoldingEntry>())
+    {
+        Console.WriteLine($"  {holding.Symbol} | Qty: {holding.Quantity} | PnL: {holding.Pnl} ({holding.PnlPercent}%)");
+    }
+    if (response.Data.Statistics != null)
+    {
+        Console.WriteLine($"\nStatistics:");
+        Console.WriteLine($"  Total Holding Value: {response.Data.Statistics.TotalHoldingValue}");
+        Console.WriteLine($"  Total P&L: {response.Data.Statistics.TotalProfitAndLoss} ({response.Data.Statistics.TotalPnlPercentage}%)");
+    }
+}
+```
+
+**Holdings Response**
+
+```
+Status: success
+
+Holdings:
+  RELIANCE | Qty: 1 | PnL: -149 (-11.1%)
+  TATASTEEL | Qty: 1 | PnL: -15 (-10.41%)
+  CANBK | Qty: 5 | PnL: -69 (-13.43%)
+
+Statistics:
+  Total Holding Value: 1768
+  Total P&L: -233.15 (-11.65%)
+```
+
+### Holidays Example
+
+```csharp
+var response = client.Holidays(year: 2025);
+Console.WriteLine($"Status: {response.Status}");
+if (response.IsSuccess && response.Data != null)
+{
+    Console.WriteLine($"Total Holidays: {response.Data.Count}\n");
+    Console.WriteLine($"{"Date",-12} {"Description",-35} {"Type",-20}");
+    Console.WriteLine(new string('-', 70));
+    foreach (var holiday in response.Data.Take(5))
+    {
+        Console.WriteLine($"{holiday.Date,-12} {holiday.Description,-35} {holiday.HolidayType,-20}");
+    }
+}
+```
+
+**Holidays Response**
+
+```
+Status: success
+Total Holidays: 15
+
+Date         Description                         Type
+----------------------------------------------------------------------
+2025-02-26   Maha Shivaratri                     TRADING_HOLIDAY
+2025-03-14   Holi                                TRADING_HOLIDAY
+2025-03-31   Id-Ul-Fitr (Ramadan)                TRADING_HOLIDAY
+2025-04-10   Shri Mahavir Jayanti                TRADING_HOLIDAY
+2025-04-14   Dr. Baba Saheb Ambedkar Jayanti     TRADING_HOLIDAY
+```
+
+### Timings Example
+
+```csharp
+var response = client.Timings(date: "2025-12-19");
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"\nExchange Timings:");
+    foreach (var timing in response.Data)
+    {
+        var start = DateTimeOffset.FromUnixTimeMilliseconds(timing.StartTime).ToLocalTime();
+        var end = DateTimeOffset.FromUnixTimeMilliseconds(timing.EndTime).ToLocalTime();
+        Console.WriteLine($"  {timing.Exchange}: {start:HH:mm} - {end:HH:mm}");
+    }
+}
+```
+
+**Timings Response**
+
+```
+Status: success
+
+Exchange Timings:
+  NSE: 09:15 - 15:30
+  BSE: 09:15 - 15:30
+  NFO: 09:15 - 15:30
+  BFO: 09:15 - 15:30
+  MCX: 09:00 - 23:45
+  BCD: 09:00 - 17:00
+  CDS: 09:00 - 17:00
+```
+
+### Analyzer Status Example
+
+```csharp
+var response = client.AnalyzerStatus();
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Analyze Mode: {response.Data.AnalyzeMode}");
+    Console.WriteLine($"Mode: {response.Data.Mode}");
+    Console.WriteLine($"Total Logs: {response.Data.TotalLogs}");
+}
+```
+
+**Analyzer Status Response**
+
+```
+Status: success
+Analyze Mode: True
+Mode: analyze
+Total Logs: 2
+```
+
+### Analyzer Toggle Example
+
+```csharp
+// Switch to analyze mode (simulated responses)
+var response = client.AnalyzerToggle(mode: true);
+Console.WriteLine($"Status: {response.Status}");
+if (response.Data != null)
+{
+    Console.WriteLine($"Analyze Mode: {response.Data.AnalyzeMode}");
+    Console.WriteLine($"Mode: {response.Data.Mode}");
+    Console.WriteLine($"Message: {response.Data.Message}");
+    Console.WriteLine($"Total Logs: {response.Data.TotalLogs}");
+}
+```
+
+**Analyzer Toggle Response**
+
+```
+Status: success
+Analyze Mode: True
+Mode: analyze
+Message: Analyzer mode switched to analyze
+Total Logs: 2
+```
+
+***
+
+### Endpoints not wrapped by the SDK
+
+The Tradeboard.NET SDK does not expose helpers for the GTT endpoints, `multioptiongreeks` or `ping`. Reach them by posting to the REST endpoint directly at `http://127.0.0.1:5000/api/v1/<endpoint>`, passing the same `apikey` field the SDK sends.
+
+**GTT (Good Till Triggered)**
+
+Four endpoints, all POST with a flat JSON body: `placegttorder`, `modifygttorder`, `cancelgttorder` and `gttorderbook`. `trigger_type` is `SINGLE` or `OCO`, and `product` accepts only `CNC` or `NRML`; `MIS` is rejected because a GTT can sit with the broker for days.
+
+SINGLE, buy IDEA if it dips to 9.55:
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "strategy": "My GTT Strategy",
+  "trigger_type": "SINGLE",
+  "exchange": "NSE",
+  "symbol": "IDEA",
+  "action": "BUY",
+  "product": "CNC",
+  "quantity": 1,
+  "pricetype": "LIMIT",
+  "price": 9.50,
+  "triggerprice_sl": 9.55,
+  "triggerprice_tg": 0,
+  "stoploss": null,
+  "target": null
+}
+```
+
+```json
+{"status": "success", "trigger_id": "23132604291205"}
+```
+
+For SINGLE send exactly one of `triggerprice_sl` (trigger sits below LTP) or `triggerprice_tg` (trigger sits above LTP) and leave the other at `0`. For OCO send all four of `triggerprice_sl`, `stoploss`, `triggerprice_tg` and `target`, with `triggerprice_sl` strictly less than `triggerprice_tg`. `modifygttorder` takes the same body plus `trigger_id`, `cancelgttorder` takes `apikey`, `strategy` and `trigger_id`, and `gttorderbook` takes `apikey` alone and returns the active triggers under `data`.
+
+**MultiOptionGreeks**
+
+`optiongreeks` prices one symbol at a time. `multioptiongreeks` prices 1 to 50 option symbols in a single call, with `interest_rate` and `expiry_time` set once for the whole batch:
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "symbols": [
+    {"symbol": "NIFTY30DEC2526000CE", "exchange": "NFO"},
+    {"symbol": "NIFTY30DEC2526000PE", "exchange": "NFO"}
+  ],
+  "interest_rate": 7.0
+}
+```
+
+Individual items can fail while the batch still returns `"status": "success"`, so inspect each entry in `data` and the `summary` block.
+
+**Ping**
+
+`ping` confirms the API key is valid and reports the connected broker:
+
+```json
+{"apikey": "<your_app_apikey>"}
+```
+
+```json
+{"data": {"broker": "zerodha", "message": "pong"}, "status": "success"}
+```
+***
+
+## Async API Reference
+
+All methods have async versions with the `Async` suffix. For example:
+
+```csharp
+// Async PlaceOrder
+var response = await client.PlaceOrderAsync(
+    strategy: "Python",
+    symbol: "NHPC",
+    action: "BUY",
+    exchange: "NSE",
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1
+);
+
+// Async Quotes
+var quotes = await client.QuotesAsync(symbol: "RELIANCE", exchange: "NSE");
+
+// Async OrderBook
+var orderBook = await client.OrderBookAsync();
+
+// Async with CancellationToken
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+var funds = await client.FundsAsync(cts.Token);
+```
+
+#### Available Async Methods
+
+| Sync Method           | Async Method               |
+| --------------------- | -------------------------- |
+| `PlaceOrder()`        | `PlaceOrderAsync()`        |
+| `PlaceSmartOrder()`   | `PlaceSmartOrderAsync()`   |
+| `OptionsOrder()`      | `OptionsOrderAsync()`      |
+| `OptionsMultiOrder()` | `OptionsMultiOrderAsync()` |
+| `BasketOrder()`       | `BasketOrderAsync()`       |
+| `SplitOrder()`        | `SplitOrderAsync()`        |
+| `ModifyOrder()`       | `ModifyOrderAsync()`       |
+| `CancelOrder()`       | `CancelOrderAsync()`       |
+| `CancelAllOrder()`    | `CancelAllOrderAsync()`    |
+| `ClosePosition()`     | `ClosePositionAsync()`     |
+| `OrderStatus()`       | `OrderStatusAsync()`       |
+| `OpenPosition()`      | `OpenPositionAsync()`      |
+| `Quotes()`            | `QuotesAsync()`            |
+| `MultiQuotes()`       | `MultiQuotesAsync()`       |
+| `Depth()`             | `DepthAsync()`             |
+| `History()`           | `HistoryAsync()`           |
+| `Intervals()`         | `IntervalsAsync()`         |
+| `OptionChain()`       | `OptionChainAsync()`       |
+| `Symbol()`            | `SymbolAsync()`            |
+| `Search()`            | `SearchAsync()`            |
+| `OptionSymbol()`      | `OptionSymbolAsync()`      |
+| `SyntheticFuture()`   | `SyntheticFutureAsync()`   |
+| `OptionGreeks()`      | `OptionGreeksAsync()`      |
+| `Expiry()`            | `ExpiryAsync()`            |
+| `Instruments()`       | `InstrumentsAsync()`       |
+| `Telegram()`          | `TelegramAsync()`          |
+| `Funds()`             | `FundsAsync()`             |
+| `Margin()`            | `MarginAsync()`            |
+| `OrderBook()`         | `OrderBookAsync()`         |
+| `TradeBook()`         | `TradeBookAsync()`         |
+| `PositionBook()`      | `PositionBookAsync()`      |
+| `Holdings()`          | `HoldingsAsync()`          |
+| `Holidays()`          | `HolidaysAsync()`          |
+| `Timings()`           | `TimingsAsync()`           |
+| `AnalyzerStatus()`    | `AnalyzerStatusAsync()`    |
+| `AnalyzerToggle()`    | `AnalyzerToggleAsync()`    |
+
+***
+
+## WebSocket Streaming
+
+### LTP Data (Streaming Websocket)
+
+```csharp
+using Tradeboard.NET;
+using Tradeboard.NET.Models.Common;
+
+// Initialize Tradeboard client
+var client = new Api(
+    apiKey: "your_api_key",
+    host: "http://127.0.0.1:5000",
+    wsUrl: "ws://127.0.0.1:8765"
+);
+
+// Define instruments to subscribe for LTP
+var instruments = new List<Instrument>
+{
+    new Instrument { Exchange = "MCX", Symbol = "CRUDEOIL16JAN26FUT" }
+};
+
+// Connect and subscribe
+client.Connect();
+client.SubscribeLtp(instruments);
+
+// Wait for data
+Thread.Sleep(3000);
+
+// Get cached LTP data
+var ltpData = client.GetLtp("MCX", "CRUDEOIL16JAN26FUT");
+if (ltpData.ContainsKey("MCX") && ltpData["MCX"].ContainsKey("CRUDEOIL16JAN26FUT"))
+{
+    var ltp = ltpData["MCX"]["CRUDEOIL16JAN26FUT"];
+    Console.WriteLine($"Exchange: {ltp.Exchange}");
+    Console.WriteLine($"Symbol: {ltp.Symbol}");
+    Console.WriteLine($"Price: {ltp.Price}");
+}
+
+// Unsubscribe and disconnect
+client.UnsubscribeLtp(instruments);
+client.Disconnect();
+```
+
+**LTP Response**
+
+```
+Exchange: MCX
+Symbol: CRUDEOIL16JAN26FUT
+Price: 5218.0
+```
+
+### Quotes (Streaming Websocket)
+
+```csharp
+using Tradeboard.NET;
+using Tradeboard.NET.Models.Common;
+
+// Initialize Tradeboard client
+var client = new Api(
+    apiKey: "your_api_key",
+    host: "http://127.0.0.1:5000",
+    wsUrl: "ws://127.0.0.1:8765"
+);
+
+// Instruments list
+var instruments = new List<Instrument>
+{
+    new Instrument { Exchange = "MCX", Symbol = "CRUDEOIL16JAN26FUT" }
+};
+
+// Connect and subscribe to quote stream
+client.Connect();
+client.SubscribeQuote(instruments);
+
+// Wait for data
+Thread.Sleep(3000);
+
+// Get cached Quote data
+var quoteData = client.GetQuotes("MCX", "CRUDEOIL16JAN26FUT");
+if (quoteData.ContainsKey("MCX") && quoteData["MCX"].ContainsKey("CRUDEOIL16JAN26FUT"))
+{
+    var quote = quoteData["MCX"]["CRUDEOIL16JAN26FUT"];
+    Console.WriteLine($"Exchange: {quote.Exchange}");
+    Console.WriteLine($"Symbol: {quote.Symbol}");
+    Console.WriteLine($"Open: {quote.Open}");
+    Console.WriteLine($"High: {quote.High}");
+    Console.WriteLine($"Low: {quote.Low}");
+    Console.WriteLine($"LTP: {quote.Ltp}");
+    Console.WriteLine($"Volume: {quote.Volume}");
+}
+
+// Unsubscribe and disconnect
+client.UnsubscribeQuote(instruments);
+client.Disconnect();
+```
+
+**Quote Response**
+
+```
+Exchange: MCX
+Symbol: CRUDEOIL16JAN26FUT
+Open: 5124.0
+High: 5246.0
+Low: 5114.0
+LTP: 5218.0
+Volume: 14537
+```
+
+### Depth (Streaming Websocket)
+
+```csharp
+using Tradeboard.NET;
+using Tradeboard.NET.Models.Common;
+
+// Initialize Tradeboard client
+var client = new Api(
+    apiKey: "your_api_key",
+    host: "http://127.0.0.1:5000",
+    wsUrl: "ws://127.0.0.1:8765"
+);
+
+// Instruments list for depth
+var instruments = new List<Instrument>
+{
+    new Instrument { Exchange = "MCX", Symbol = "CRUDEOIL16JAN26FUT" }
+};
+
+// Connect and subscribe to depth stream
+client.Connect();
+client.SubscribeDepth(instruments);
+
+// Wait for data
+Thread.Sleep(3000);
+
+// Get cached Depth data
+var depthData = client.GetDepth("MCX", "CRUDEOIL16JAN26FUT");
+if (depthData.ContainsKey("MCX") && depthData["MCX"].ContainsKey("CRUDEOIL16JAN26FUT"))
+{
+    var depth = depthData["MCX"]["CRUDEOIL16JAN26FUT"];
+    Console.WriteLine($"Exchange: {depth.Exchange}");
+    Console.WriteLine($"Symbol: {depth.Symbol}");
+    Console.WriteLine($"LTP: {depth.Ltp}");
+
+    Console.WriteLine("\nBuy Depth:");
+    foreach (var level in depth.Buy.Take(5))
+        Console.WriteLine($"  Price: {level.Price} | Qty: {level.Quantity} | Orders: {level.Orders}");
+
+    Console.WriteLine("\nSell Depth:");
+    foreach (var level in depth.Sell.Take(5))
+        Console.WriteLine($"  Price: {level.Price} | Qty: {level.Quantity} | Orders: {level.Orders}");
+}
+
+// Unsubscribe and disconnect
+client.UnsubscribeDepth(instruments);
+client.Disconnect();
+```
+
+**Depth Response**
+
+```
+Exchange: MCX
+Symbol: CRUDEOIL16JAN26FUT
+LTP: 5218.0
+
+Buy Depth:
+  Price: 5217.0 | Qty: 2 | Orders: 2
+  Price: 5216.0 | Qty: 16 | Orders: 8
+  Price: 5215.0 | Qty: 12 | Orders: 6
+  Price: 5214.0 | Qty: 29 | Orders: 15
+  Price: 5213.0 | Qty: 27 | Orders: 11
+
+Sell Depth:
+  Price: 5218.0 | Qty: 5 | Orders: 3
+  Price: 5219.0 | Qty: 13 | Orders: 7
+  Price: 5220.0 | Qty: 22 | Orders: 11
+  Price: 5221.0 | Qty: 15 | Orders: 5
+  Price: 5222.0 | Qty: 15 | Orders: 6
+```
+
+### WebSocket connection notes
+
+The proxy listens on `ws://127.0.0.1:8765`. Every client authenticates with its Tradeboard API key before subscribing, and a connection that has not authenticated within 15 seconds is closed. Subscriptions carry a mode: `1` for LTP, `2` for Quote and `3` for Depth. The strings `LTP`, `Quote` and `Depth` are accepted as well and are matched case-insensitively; Quote is the default when the field is omitted. LTP updates are throttled to one per symbol per 50 ms, so a fast-moving symbol delivers at most 20 LTP messages a second.
+
+### Order Updates (Streaming WebSocket)
+
+The same proxy on port 8765 also carries account-scoped order updates. The Tradeboard.NET SDK does not wrap them, so send the raw frames on your own WebSocket connection: authenticate first, then subscribe.
+
+```json
+{"action": "authenticate", "api_key": "<your_app_apikey>"}
+```
+
+```json
+{"action": "subscribe_orders"}
+```
+
+The server acknowledges the subscription:
+
+```json
+{"type": "subscribe_orders", "status": "success", "message": "Subscribed to order updates"}
+```
+
+Every subsequent status change on any order in the account then arrives as:
+
+```json
+{
+  "type": "order_update",
+  "user_id": "<tradeboard_loginid>",
+  "mode": "live",
+  "broker": "zerodha",
+  "orderid": "250408000989443",
+  "symbol": "RELIANCE",
+  "exchange": "NSE",
+  "action": "BUY",
+  "quantity": 1,
+  "price": 0,
+  "trigger_price": 0,
+  "pricetype": "MARKET",
+  "product": "MIS",
+  "order_status": "complete",
+  "filled_quantity": 1,
+  "pending_quantity": 0,
+  "average_price": 1180.1,
+  "rejection_reason": null
+}
+```
+
+`{"action": "unsubscribe_orders"}` stops the stream. Unlike a market-data subscription there is no symbol, exchange or mode: the subscription covers the whole account.
+
+### WebSocket Methods Summary
+
+| Method                                  | Description                           |
+| --------------------------------------- | ------------------------------------- |
+| `Connect()` / `ConnectAsync()`          | Connect to WebSocket server           |
+| `Disconnect()` / `DisconnectAsync()`    | Disconnect from WebSocket server      |
+| `SubscribeLtp(instruments, callback)`   | Subscribe to LTP updates              |
+| `UnsubscribeLtp(instruments)`           | Unsubscribe from LTP updates          |
+| `SubscribeQuote(instruments, callback)` | Subscribe to Quote updates            |
+| `UnsubscribeQuote(instruments)`         | Unsubscribe from Quote updates        |
+| `SubscribeDepth(instruments, callback)` | Subscribe to Market Depth updates     |
+| `UnsubscribeDepth(instruments)`         | Unsubscribe from Market Depth updates |
+| `GetLtp(exchange, symbol)`              | Get cached LTP data                   |
+| `GetQuotes(exchange, symbol)`           | Get cached Quote data                 |
+| `GetDepth(exchange, symbol)`            | Get cached Depth data                 |
+
+***
+
+### Error Handling
+
+```csharp
+var response = client.PlaceOrder(
+    strategy: "Python",
+    symbol: "INVALID",
+    action: "BUY",
+    exchange: "NSE",
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1
+);
+
+if (!response.IsSuccess)
+{
+    Console.WriteLine($"Error: {response.Message}");
+    Console.WriteLine($"Error Type: {response.ErrorType}");
+}
+```
+
+***
+
+### Complete API Reference
+
+#### Order Management
+
+| Sync Method         | Async Method             | Description                              |
+| ------------------- | ------------------------ | ---------------------------------------- |
+| `PlaceOrder()`      | `PlaceOrderAsync()`      | Place a new order                        |
+| `PlaceSmartOrder()` | `PlaceSmartOrderAsync()` | Place a smart order with position sizing |
+| `ModifyOrder()`     | `ModifyOrderAsync()`     | Modify an existing order                 |
+| `CancelOrder()`     | `CancelOrderAsync()`     | Cancel a specific order                  |
+| `CancelAllOrder()`  | `CancelAllOrderAsync()`  | Cancel all open orders                   |
+| `ClosePosition()`   | `ClosePositionAsync()`   | Close all open positions                 |
+| `OrderStatus()`     | `OrderStatusAsync()`     | Get status of a specific order           |
+| `OpenPosition()`    | `OpenPositionAsync()`    | Get current open position quantity       |
+
+#### Basket & Split Orders
+
+| Sync Method     | Async Method         | Description                               |
+| --------------- | -------------------- | ----------------------------------------- |
+| `BasketOrder()` | `BasketOrderAsync()` | Place multiple orders in a single request |
+| `SplitOrder()`  | `SplitOrderAsync()`  | Split large order into smaller chunks     |
+
+#### Options Trading
+
+| Sync Method           | Async Method               | Description                      |
+| --------------------- | -------------------------- | -------------------------------- |
+| `OptionsOrder()`      | `OptionsOrderAsync()`      | Place ATM/ITM/OTM option order   |
+| `OptionsMultiOrder()` | `OptionsMultiOrderAsync()` | Place multi-leg option strategy  |
+| `OptionSymbol()`      | `OptionSymbolAsync()`      | Get option symbol by offset      |
+| `OptionChain()`       | `OptionChainAsync()`       | Get full option chain data       |
+| `OptionGreeks()`      | `OptionGreeksAsync()`      | Calculate option Greeks          |
+| `SyntheticFuture()`   | `SyntheticFutureAsync()`   | Calculate synthetic future price |
+| `Expiry()`            | `ExpiryAsync()`            | Get expiry dates for symbol      |
+
+#### Market Data
+
+| Sync Method     | Async Method         | Description                       |
+| --------------- | -------------------- | --------------------------------- |
+| `Quotes()`      | `QuotesAsync()`      | Get real-time quotes for a symbol |
+| `MultiQuotes()` | `MultiQuotesAsync()` | Get quotes for multiple symbols   |
+| `Depth()`       | `DepthAsync()`       | Get market depth (order book)     |
+| `History()`     | `HistoryAsync()`     | Get historical OHLCV data         |
+| `Intervals()`   | `IntervalsAsync()`   | Get supported time intervals      |
+
+#### Symbol & Search
+
+| Sync Method     | Async Method         | Description              |
+| --------------- | -------------------- | ------------------------ |
+| `Symbol()`      | `SymbolAsync()`      | Get symbol details       |
+| `Search()`      | `SearchAsync()`      | Search for symbols       |
+| `Instruments()` | `InstrumentsAsync()` | Download all instruments |
+
+#### Account & Portfolio
+
+| Sync Method      | Async Method          | Description                   |
+| ---------------- | --------------------- | ----------------------------- |
+| `Funds()`        | `FundsAsync()`        | Get funds and margin details  |
+| `Margin()`       | `MarginAsync()`       | Calculate margin requirements |
+| `OrderBook()`    | `OrderBookAsync()`    | Get order book                |
+| `TradeBook()`    | `TradeBookAsync()`    | Get trade book                |
+| `PositionBook()` | `PositionBookAsync()` | Get position book             |
+| `Holdings()`     | `HoldingsAsync()`     | Get stock holdings            |
+
+#### Utilities
+
+| Sync Method        | Async Method            | Description                     |
+| ------------------ | ----------------------- | ------------------------------- |
+| `Holidays()`       | `HolidaysAsync()`       | Get trading holidays for a year |
+| `Timings()`        | `TimingsAsync()`        | Get exchange timings for a date |
+| `Telegram()`       | `TelegramAsync()`       | Send Telegram alert message     |
+| `AnalyzerStatus()` | `AnalyzerStatusAsync()` | Get analyzer mode status        |
+| `AnalyzerToggle()` | `AnalyzerToggleAsync()` | Toggle analyze/live mode        |
+
+#### WebSocket Streaming
+
+| Sync Method          | Async Method              | Description                 |
+| -------------------- | ------------------------- | --------------------------- |
+| `Connect()`          | `ConnectAsync()`          | Connect to WebSocket server |
+| `Disconnect()`       | `DisconnectAsync()`       | Disconnect from WebSocket   |
+| `SubscribeLtp()`     | `SubscribeLtpAsync()`     | Subscribe to LTP updates    |
+| `UnsubscribeLtp()`   | `UnsubscribeLtpAsync()`   | Unsubscribe from LTP        |
+| `SubscribeQuote()`   | `SubscribeQuoteAsync()`   | Subscribe to Quote updates  |
+| `UnsubscribeQuote()` | `UnsubscribeQuoteAsync()` | Unsubscribe from Quote      |
+| `SubscribeDepth()`   | `SubscribeDepthAsync()`   | Subscribe to Depth updates  |
+| `UnsubscribeDepth()` | `UnsubscribeDepthAsync()` | Unsubscribe from Depth      |
+| `GetLtp()`           | -                         | Get cached LTP data         |
+| `GetQuotes()`        | -                         | Get cached Quote data       |
+| `GetDepth()`         | -                         | Get cached Depth data       |
+
+***
+
+### License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+### Links
+
+* [Tradeboard Platform](https://rajeevupadhyay.com/)
+* [API Documentation](https://docs.algo.wesoftcorp.com/api-documentation/v1)
+* [Order Constants](https://docs.algo.wesoftcorp.com/api-documentation/v1/order-constants)

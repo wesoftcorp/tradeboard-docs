@@ -1,0 +1,555 @@
+# Docker + Custom Domain
+
+## Tradeboard Docker Installation Script
+
+### Quick Start
+
+This script provides a simplified, automated installation of Tradeboard using Docker on Ubuntu/Debian systems with custom domain and SSL.
+
+#### One-Line Installation
+
+```bash
+wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
+```
+
+#### Prerequisites
+
+* Fresh Ubuntu 22.04 LTS or later, or Debian 12 or later. `install-docker.sh` refuses to run on any other distribution: it checks the OS ID and exits unless it is `ubuntu` or `debian`.
+* Root access OR non-root user with sudo privileges
+* Domain name pointed to your server IP
+* Server with at least 1GB RAM (2GB recommended)
+
+#### Installation Steps
+
+**Option 1: As Non-Root User (Recommended)**
+
+```bash
+# If you're logged in as root, create a non-root user first
+adduser tradeboard
+usermod -aG sudo tradeboard
+su - tradeboard
+
+# Download and run the script
+wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh
+chmod +x install-docker.sh
+./install-docker.sh
+```
+
+**Option 2: As Root User**
+
+```bash
+# Download and run directly
+wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh
+chmod +x install-docker.sh
+./install-docker.sh
+# (Confirm when prompted to proceed as root)
+```
+
+**Note:** While the script works as root, using a non-root user is recommended for better security in production environments.
+
+#### Follow the Prompts
+
+The script will ask you for:
+
+* Domain name (e.g., demo.tradeboard.in)
+* Broker name from the supported list
+* Broker API credentials (key and secret)
+* Market data credentials (for XTS brokers only)
+* Email for SSL certificate notifications
+* Confirmation to proceed
+
+#### What the Script Does
+
+1. Updates system packages
+2. Installs Docker and Docker Compose v2
+3. Installs Nginx web server
+4. Installs Certbot for SSL
+5. Clones Tradeboard repository to `/opt/tradeboard`
+6. Configures environment variables, generating a fresh `APP_KEY` and `API_KEY_PEPPER`, setting `HOST_SERVER` and `WEBSOCKET_URL` to your domain, and switching `WEBSOCKET_HOST` and `FLASK_HOST_IP` to `0.0.0.0` so the published container ports are reachable. `ZMQ_HOST` is deliberately left on `127.0.0.1`.
+7. Sets up firewall (UFW)
+8. Obtains SSL certificate from Let's Encrypt
+9. Configures Nginx with SSL and WebSocket support
+10. Builds and starts the Docker container
+11. Creates management helper scripts
+
+**Installation typically takes 5-10 minutes.**
+
+#### After Installation
+
+1. Visit `https://yourdomain.com` in your browser
+2. Create your admin account
+3. Login to Tradeboard
+4. Complete broker authentication using OAuth
+
+#### Management Commands
+
+The installation creates these helper commands:
+
+```bash
+# View application status
+tradeboard-status
+
+# View live logs (follow mode)
+tradeboard-logs
+
+# Restart application
+tradeboard-restart
+
+# Create backup
+tradeboard-backup
+```
+
+#### Docker Commands
+
+```bash
+# Navigate to installation directory
+cd /opt/tradeboard
+
+# Restart container
+sudo docker compose restart
+
+# Stop container
+sudo docker compose stop
+
+# Start container
+sudo docker compose start
+
+# View logs
+sudo docker compose logs -f
+
+# Rebuild from scratch
+sudo docker compose down
+sudo docker compose build --no-cache
+sudo docker compose up -d
+```
+
+#### File Locations
+
+| Item             | Location                                        |
+| ---------------- | ----------------------------------------------- |
+| Installation     | `/opt/tradeboard`                                 |
+| Configuration    | `/opt/tradeboard/.env` (bind-mounted to `/app/.env`) |
+| Database         | Docker volume `tradeboard_db`                     |
+| Application Logs | Docker volume `tradeboard_log`                    |
+| Strategies       | Docker volume `tradeboard_strategies`             |
+| Keys             | Docker volume `tradeboard_keys`                   |
+| Nginx Config     | `/etc/nginx/sites-available/yourdomain.com`     |
+| SSL Certificates | `/etc/letsencrypt/live/yourdomain.com/`         |
+| Backups          | `/opt/tradeboard-backups/`                        |
+
+Everything except `.env` is a Docker **named volume**, not a host directory, which is what keeps your data safe across `docker compose build --no-cache`. Docker Compose prefixes the real volume name with the project name (taken from the directory), so an install in `/opt/tradeboard` produces `tradeboard_tradeboard_db`. Read the actual name rather than assuming it:
+
+```bash
+sudo docker volume ls --format '{{.Name}}' | grep tradeboard
+```
+
+To reach the files themselves, copy them out of the running container:
+
+```bash
+cd /opt/tradeboard
+sudo docker compose cp tradeboard:/app/log ./log-snapshot
+```
+
+#### Updating Tradeboard
+
+```bash
+cd /opt/tradeboard
+
+# Create backup first
+tradeboard-backup
+
+# Stop container
+sudo docker compose down
+
+# Pull latest code
+sudo git pull origin main
+
+# Rebuild and restart
+sudo docker compose build --no-cache
+sudo docker compose up -d
+
+# Verify
+tradeboard-status
+```
+
+#### Troubleshooting
+
+**Container not starting:**
+
+```bash
+# Check container status
+sudo docker ps -a
+
+# View detailed logs
+sudo docker compose logs -f
+
+# Check container health
+sudo docker inspect tradeboard-web --format='{{.State.Health.Status}}'
+```
+
+**Permission errors on `.env`:**
+
+The container runs as UID/GID 1000. If the bind-mounted `.env` is owned by another user, the first-run secret rotation cannot write to it and the worker restarts in a loop:
+
+```bash
+cd /opt/tradeboard
+sudo chown 1000:1000 .env
+sudo chmod 600 .env
+sudo docker compose restart
+```
+
+The `log`, `db`, `strategies`, `keys` and `tmp` paths are Docker named volumes owned by the container, so they need no host-side permission fixing.
+
+**WebSocket connection issues:**
+
+```bash
+# Check if ports are listening
+sudo netstat -tlnp | grep -E ':(5000|8765)'
+
+# Test WebSocket connection
+curl -i -N \
+  -H "Connection: Upgrade" \
+  -H "Upgrade: websocket" \
+  https://yourdomain.com/ws
+```
+
+**Nginx issues:**
+
+```bash
+# Test configuration
+sudo nginx -t
+
+# View error logs
+sudo tail -f /var/log/nginx/yourdomain.com_error.log
+
+# Restart Nginx
+sudo systemctl restart nginx
+```
+
+**SSL certificate issues:**
+
+```bash
+# Test renewal
+sudo certbot renew --dry-run
+
+# Force renewal
+sudo certbot renew --force-renewal
+
+# Check certificate status
+sudo certbot certificates
+```
+
+**Docker issues:**
+
+```bash
+# Check Docker status
+sudo systemctl status docker
+
+# Restart Docker
+sudo systemctl restart docker
+
+# View Docker logs
+sudo journalctl -u docker -f
+```
+
+#### Firewall Configuration
+
+The script automatically configures UFW:
+
+* **Port 22** (SSH) - Open
+* **Port 80** (HTTP) - Open (for SSL renewal)
+* **Port 443** (HTTPS) - Open
+* **Ports 5000, 8765** - Only accessible via localhost (Docker ports)
+
+#### Security Best Practices
+
+1. **Change default credentials** immediately after first login
+2.  **Keep system updated**:
+
+    ```bash
+    sudo apt update && sudo apt upgrade -y
+    ```
+3.  **Monitor logs regularly**:
+
+    ```bash
+    tradeboard-logs
+    ```
+4.  **Setup automated backups**: Create a cron job
+
+    ```bash
+    # Backup daily at 2 AM
+    crontab -e
+    # Add: 0 2 * * * /usr/local/bin/tradeboard-backup
+    ```
+5. **Use strong passwords** for your Tradeboard account
+6. **Never share broker credentials** with anyone
+7.  **Review firewall rules periodically**:
+
+    ```bash
+    sudo ufw status
+    ```
+
+#### Cloudflare Setup (Optional)
+
+For additional security and CDN benefits:
+
+1. **Add domain to Cloudflare**
+   * Sign up at cloudflare.com
+   * Add your domain
+2. **Update DNS**
+   * In Cloudflare DNS settings:
+   * Create A record pointing to your server IP
+   * Enable proxy (orange cloud icon)
+3. **Configure SSL/TLS**
+   * Go to SSL/TLS settings
+   * Set mode to **"Full (strict)"**
+   * Enable "Always Use HTTPS"
+4. **Enable WebSockets**
+   * Go to Network settings
+   * Enable "WebSockets"
+   * Enable "HTTP/2"
+5. **Security Settings** (Optional)
+   * Enable "Under Attack Mode" if needed
+   * Set up Page Rules for caching
+   * Configure Firewall Rules
+
+#### Backup and Restore
+
+**Create Backup:**
+
+```bash
+tradeboard-backup
+```
+
+Backups are stored in `/opt/tradeboard-backups/` and include:
+
+* `.env` (your configuration, stored as a plain file)
+* `db.tar.gz` (an archive of the database volume's contents)
+* `strategies.tar.gz` (an archive of the strategies volume, when present)
+* The last 7 backups are kept automatically
+
+The script stops the stack, resolves the **real** volume names by inspecting the running container, archives them, verifies the database archive is not empty, and restarts the stack whether or not it succeeded.
+
+**Restore from Backup:**
+
+The archive holds nested tarballs of volume contents, so extracting it into `/opt/tradeboard` does not restore anything. Unpack the outer archive first, then write each inner archive back into its volume:
+
+```bash
+cd /opt/tradeboard
+sudo docker compose stop
+
+# 1. Unpack the outer archive to a scratch directory
+TMP=$(mktemp -d)
+sudo tar -xzf /opt/tradeboard-backups/tradeboard_backup_TIMESTAMP.tar.gz -C "$TMP"
+ls "$TMP"        # .env  db.tar.gz  [strategies.tar.gz]
+
+# 2. Find the real volume names (Compose prefixes them with the project name)
+DB_VOL=$(sudo docker inspect tradeboard-web \
+  --format '{{range .Mounts}}{{if eq .Destination "/app/db"}}{{.Name}}{{end}}{{end}}')
+ST_VOL=$(sudo docker inspect tradeboard-web \
+  --format '{{range .Mounts}}{{if eq .Destination "/app/strategies"}}{{.Name}}{{end}}{{end}}')
+echo "$DB_VOL $ST_VOL"
+
+# 3. Write the contents back into the volumes
+sudo docker run --rm -v "$DB_VOL":/data -v "$TMP":/backup alpine \
+  sh -c 'rm -rf /data/* && tar -xzf /backup/db.tar.gz -C /data'
+
+[ -f "$TMP/strategies.tar.gz" ] && sudo docker run --rm -v "$ST_VOL":/data -v "$TMP":/backup alpine \
+  sh -c 'rm -rf /data/* && tar -xzf /backup/strategies.tar.gz -C /data'
+
+# 4. Restore the configuration file and its ownership
+sudo cp "$TMP/.env" /opt/tradeboard/.env
+sudo chown 1000:1000 /opt/tradeboard/.env
+sudo chmod 600 /opt/tradeboard/.env
+sudo rm -rf "$TMP"
+
+sudo docker compose start
+tradeboard-status
+```
+
+::: warning
+Restoring `.env` restores `API_KEY_PEPPER` and `FERNET_SALT` along with it. Those two must match the database you are restoring: they derive the password hashes and the encryption key for broker tokens. Restoring a database without its matching `.env` leaves you unable to log in.
+:::
+
+#### Complete Uninstallation
+
+```bash
+# Stop and remove container
+cd /opt/tradeboard
+sudo docker compose down -v
+
+# Remove installation directory
+sudo rm -rf /opt/tradeboard
+
+# Remove backups (optional)
+sudo rm -rf /opt/tradeboard-backups
+
+# Remove Nginx configuration
+sudo rm /etc/nginx/sites-available/yourdomain.com
+sudo rm /etc/nginx/sites-enabled/yourdomain.com
+sudo systemctl reload nginx
+
+# Remove SSL certificate
+sudo certbot delete --cert-name yourdomain.com
+
+# Remove management scripts
+sudo rm /usr/local/bin/tradeboard-*
+
+# Optional: Remove Docker (if not needed for other apps)
+sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo rm -rf /var/lib/docker
+```
+
+#### Getting Help
+
+* **Documentation**: https://docs.algo.wesoftcorp.com
+* **Discord Community**: https://discord.com/invite/UPh7QPsNhP
+* **GitHub Issues**: https://github.com/wesoftcorp/tradeboard-docs/issues
+* **Website**: https://rajeevupadhyay.com
+
+#### Supported Brokers
+
+All 36 broker plugins in `VALID_BROKERS` are selectable during installation:
+
+| Broker          | Code             | XTS API |
+| --------------- | ---------------- | ------- |
+| 5paisa          | `fivepaisa`      | No      |
+| 5paisa XTS      | `fivepaisaxts`   | Yes     |
+| AliceBlue       | `aliceblue`      | No      |
+| Angel One       | `angel`          | No      |
+| Arrow           | `arrow`          | No      |
+| Compositedge    | `compositedge`   | Yes     |
+| Definedge       | `definedge`      | No      |
+| Delta Exchange  | `deltaexchange`  | No      |
+| Dhan            | `dhan`           | No      |
+| Dhan Sandbox    | `dhan_sandbox`   | No      |
+| Firstock        | `firstock`       | No      |
+| Flattrade       | `flattrade`      | No      |
+| Fyers           | `fyers`          | No      |
+| Groww           | `groww`          | No      |
+| HDFC Securities | `hdfcsecurities` | No      |
+| HDFC Sky        | `hdfcsky`        | No      |
+| IBulls          | `ibulls`         | Yes     |
+| IIFL            | `iifl`           | Yes     |
+| Iiflcapital     | `iiflcapital`    | No      |
+| IndMoney        | `indmoney`       | No      |
+| JainamXTS       | `jainamxts`      | Yes     |
+| Kotak Neo       | `kotak`          | No      |
+| Motilal Oswal   | `motilal`        | No      |
+| Mstock          | `mstock`         | No      |
+| Nubra           | `nubra`          | No      |
+| Paytm Money     | `paytm`          | No      |
+| Pocketful       | `pocketful`      | No      |
+| RMoney          | `rmoney`         | Yes     |
+| Samco           | `samco`          | No      |
+| Shoonya         | `shoonya`        | No      |
+| Tradejini       | `tradejini`      | No      |
+| TradeSmart      | `tradesmart`     | No      |
+| Upstox          | `upstox`         | No      |
+| Wisdom Capital  | `wisdom`         | Yes     |
+| Zebu            | `zebu`           | No      |
+| Zerodha         | `zerodha`        | No      |
+
+**Note:** XTS API brokers require additional market data API credentials during installation.
+
+**Note:** Delta Exchange is a 24/7 crypto venue. The installer detects it and sets `DISABLE_SESSION_EXPIRY = 'true'` so the daily 03:00 IST auto-logout does not apply.
+
+#### System Requirements
+
+**Minimum:**
+
+* 1 vCPU
+* 1GB RAM
+* 10GB disk space
+* Ubuntu 22.04 LTS or later, or Debian 12 or later
+* Internet connection
+
+**Recommended:**
+
+* 2 vCPU
+* 2GB RAM
+* 20GB SSD storage
+* Ubuntu 22.04 LTS
+* Stable internet connection
+
+#### Architecture
+
+```
+┌─────────────────┐
+│   Internet      │
+└────────┬────────┘
+         │ HTTPS (443)
+         │
+┌────────▼────────┐
+│   Nginx         │ ← SSL/TLS, Rate Limiting
+│   Reverse Proxy │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐ ┌──────────┐
+│ Flask │ │WebSocket │ ← Docker Container
+│ :5000 │ │  :8765   │   (tradeboard-web)
+└───────┘ └──────────┘
+    │
+    ▼
+┌──────────┐
+│ SQLite   │ ← Docker Volume
+│ Database │   (tradeboard_db)
+└──────────┘
+```
+
+#### FAQ
+
+**Q: Can I use this on a server with existing Nginx?** A: Yes, but you may need to manually merge configurations to avoid conflicts.
+
+**Q: Can I use a different port instead of 443?** A: Yes, but you'll need to modify the Nginx configuration manually.
+
+**Q: Will this work with a subdomain?** A: Yes, the script supports both root domains and subdomains.
+
+**Q: Can I run multiple Tradeboard instances?** A: Not with this script. Each installation assumes it's the only instance.
+
+**Q: How do I change my broker after installation?** A: Edit `/opt/tradeboard/.env`, update broker credentials, then run `sudo docker compose restart`.
+
+**Q: Is my broker data secure?** A: Yes, all data is encrypted in transit (HTTPS/WSS) and stored locally on your server.
+
+**Q: Can I use this in production?** A: Yes, this script is designed for production use with SSL, security headers, and proper firewall configuration.
+
+**Q: What if my domain doesn't have an A record yet?** A: Wait for DNS propagation (usually 5-60 minutes) before running the script.
+
+#### Changelog
+
+**Version 1.1.0** (October 19, 2024)
+
+* Added support for running as root user (with warning)
+* Fixed permission issues with docker-compose.yaml creation
+* Improved error handling
+* Enhanced management scripts
+
+**Version 1.0.0** (Initial Release)
+
+* Complete automated installation
+* SSL certificate automation
+* Docker containerization
+* Management helper scripts
+
+#### License
+
+Tradeboard is released under the **AGPL V3.0 License**.
+
+#### Contributing
+
+Contributions are welcome! Please see our Contributing Guide.
+
+***
+
+**Note**: This script is designed for fresh server installations. If you have an existing Tradeboard installation or other applications on the server, please review the script and make necessary adjustments to avoid conflicts.
+
+For production deployments, we strongly recommend:
+
+1. Using a non-root user
+2. Setting up automated backups
+3. Monitoring logs regularly
+4. Keeping the system updated
+5. Using Cloudflare or similar CDN/DDoS protection

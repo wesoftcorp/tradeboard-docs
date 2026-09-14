@@ -1,0 +1,586 @@
+# Whatsapp
+
+#### Overview
+
+The Tradeboard WhatsApp Bot connects your Tradeboard install to a WhatsApp account that you control. It does two things:
+
+1. **Outbound**: fires real-time order alerts to you (and optionally to a small list of recipients) via the same event bus that already drives Telegram, so a `/api/v1/placeorder` call lands as a WhatsApp message on your phone moments later.
+2. **Inbound**: accepts slash-command queries (`/orderbook`, `/positions`, `/quote`, and so on) that you type from your **own phone**. The bot replies in the same chat. Commands are gated by WhatsApp's own multi-device protocol, so random contacts who message your number cannot drive the bot.
+
+Unlike Telegram, WhatsApp has no separate "bot account" concept. The Tradeboard server runs as a **linked device** on your personal WhatsApp account, the same way WhatsApp Web does. You pair once with a QR scan and the encrypted session lives in `tradeboard.db`.
+
+#### Features
+
+* **One-time pairing**: Scan a QR code from the admin web UI. The session blob is Fernet-encrypted at rest and auto-reconnects on every server boot. No bot token, no third-party service registration.
+* **Event-driven alerts**: Every order topic the event bus publishes (`order.placed`, `order.modified`, `order.cancelled`, `orders.all_cancelled`, `position.closed`, `basket.completed`, `split.completed`, `options.completed`, `multiorder.completed`, plus the GTT topics) fires a WhatsApp message in parallel with Telegram.
+* **Unified send API**: One `client.whatsapp(...)` call in the Python SDK and one `POST /api/v1/whatsapp/notify` endpoint over REST handle text, image, document, self-send, single recipient, and small broadcast (up to 5) cases.
+* **Real-time trading queries**: Slash-commands from the operator's own phone trigger SDK calls and reply with the result in the same chat.
+* **Single-user security model**: The paired device IS the operator. The bot only responds to messages where WhatsApp marks `is_from_me=True` (mirrored from the operator's primary phone). Random contacts who message the operator's number arrive with `is_from_me=False` and are silently ignored.
+* **Admin-only pairing**: Pair, unpair, start, stop, config, broadcast, stats, and preferences live behind the session-authed `/whatsapp` admin page. The REST API surface is deliberately narrowed to send-only so a leaked API key cannot re-pair the device or enumerate recipients.
+
+#### Setup
+
+**1. Pair Your WhatsApp Device in Tradeboard**
+
+1. Log in to Tradeboard.
+2. From the profile dropdown (top-right) click **WhatsApp Bot**, or navigate to `/whatsapp`.
+3. Click **Start pairing**. A QR code renders inline on the page.
+4. On your phone: open WhatsApp, then **Settings**, **Linked devices**, **Link a device**, and scan the QR.
+5. The QR refreshes automatically every \~30 seconds. Each refresh streams a fresh `whatsapp_qr` SocketIO event to your browser, so the UI swaps the image without polling. When wars supplies one, a pair code is shown under the QR as an alternative to scanning.
+6. On successful scan, the status badge flips to **Connected** and the bot is ready.
+
+That's the entire setup. No bot token, no developer account, no external service.
+
+> **Note:** WhatsApp permits a maximum of four (currently) linked devices per account. If you're already at the cap, remove an unused linked device on your phone before pairing Tradeboard.
+
+**2. (Optional) Generate an Tradeboard API Key**
+
+Slash-command queries (`/orderbook`, `/positions`, and the rest) execute against the Tradeboard SDK using **your own** Tradeboard API key, looked up server-side by the owner username captured at pair time. If you haven't generated one yet:
+
+1. Navigate to **API Key** in the profile dropdown.
+2. Generate a key.
+
+The bot pulls this key automatically from `auth_db`. You don't paste it anywhere on WhatsApp, and the key never leaves the server. If no owner username was recorded (for example, the device was paired by an older build), the bot tells you to re-pair from `/whatsapp` while logged in.
+
+**3. (Optional) Configure Attachment Allowlist**
+
+If you plan to send images or documents via the API, set `WHATSAPP_ATTACHMENT_ROOTS` in `.env` to a comma-separated list of absolute directories from which the server may read media:
+
+```
+WHATSAPP_ATTACHMENT_ROOTS=/srv/charts,/srv/reports
+```
+
+When unset, the default allowlist is `<tradeboard>/db/attachments/` only. Paths containing `..`, paths under sensitive system trees (`/etc`, `/proc`, `/sys`, `/root`, `/var/log`, `C:\Windows`, `C:\Users\Default`), and paths that resolve outside the allowlist are always rejected with `400 image_path is not allowed`.
+
+#### How to Send Commands
+
+Commands work differently from Telegram. WhatsApp has no separate bot identity: the bot **is** your own WhatsApp account, running as a linked device on the Tradeboard server.
+
+1. Open WhatsApp on your phone.
+2. Scroll to the top of your chat list. There's a chat titled **"You"** or your own name (the "Message yourself" chat that WhatsApp creates automatically).
+3. Type a command starting with `/`, for example `/orderbook`.
+4. The linked device on the Tradeboard server sees the message as `is_from_me=True`, dispatches it, runs the matching SDK call, and replies in the same chat.
+5. The reply arrives back on your phone within a second or two.
+
+The technical gate is `is_from_me`, not the identity of the chat. A slash-command you type in any chat, including a conversation with somebody else, is accepted and answered **in that chat**. Use the "Message yourself" chat so a reply carrying your orderbook never lands in front of a third party.
+
+#### Available Commands
+
+**Connection Status**
+
+* `/start`, `/help`, `/menu`: Show the full command list
+* `/status`: Bot connection state, paired status, paired number, owner username
+
+**Trading Data**
+
+* `/orderbook`: Today's orders
+* `/tradebook`: Today's executed trades
+* `/positions`: Open positions
+* `/holdings`: Portfolio holdings
+* `/funds`: Account funds
+* `/pnl`: Position-level P\&L. The bot asks the SDK for a dedicated P\&L call and falls back to the positionbook when the installed SDK does not expose one, which is the case for the currently pinned SDK
+
+**Market Data**
+
+* `/quote <symbol> [exchange]`: Quote for a symbol
+  * Example: `/quote RELIANCE`
+  * Example: `/quote NIFTY NSE_INDEX`
+  * Defaults to `NSE` if exchange omitted
+
+**Trade Actions**
+
+* `/closeall`: Square off all open positions. Unlike the Telegram bot, this runs immediately with no confirmation step
+
+**Mode**
+
+* `/mode`: Show whether the Tradeboard instance is in `live` or `analyze` (sandbox) mode. Read-only; the WhatsApp bot cannot switch modes
+
+Anything else beginning with `/` gets `Unknown command. Send /help for the list.`
+
+Replies are plain-text WhatsApp messages. The bot does not curate the payload: it flattens the SDK response into `key: value` lines under a `*Title*` header, prints at most the first 10 entries of any list, and truncates the whole body at 3,500 characters with a `...(truncated)` marker. WhatsApp's own `*bold*`, `_italic_` and monospace markers survive because nothing rewrites them.
+
+#### Order Alerts (Automatic Notifications)
+
+**Overview**
+
+The bot automatically sends a WhatsApp message to the paired device's own number for every order-related API activity. No additional commands are needed: alerts are sent automatically when orders flow through the Tradeboard API.
+
+**Supported Order Events**
+
+| Topic                  | Trigger                                               |
+| ---------------------- | ----------------------------------------------------- |
+| `order.placed`         | `/api/v1/placeorder` succeeded                        |
+| `order.no_action`      | Smart order found nothing to do                       |
+| `order.modified`       | `/api/v1/modifyorder` succeeded                       |
+| `order.cancelled`      | `/api/v1/cancelorder` succeeded                       |
+| `orders.all_cancelled` | `/api/v1/cancelallorder` succeeded                    |
+| `position.closed`      | `/api/v1/closeposition` succeeded                     |
+| `basket.completed`     | All legs of a `/basketorder` completed                |
+| `split.completed`      | All sub-orders of a `/splitorder` completed           |
+| `options.completed`    | All legs of an `/optionsorder` (split path) completed |
+| `multiorder.completed` | All legs of an `/optionsmultiorder` completed         |
+| `gtt.placed`           | `/api/v1/placegttorder` succeeded                     |
+| `gtt.modified`         | `/api/v1/modifygttorder` succeeded                    |
+| `gtt.cancelled`        | `/api/v1/cancelgttorder` succeeded                    |
+| `gtt.triggered`        | A resting GTT fired and placed its order              |
+| `gtt.expired`          | A GTT lapsed past `expires_at` without firing         |
+
+Failure events (`order.failed`, `order.modify_failed`, `order.cancel_failed`, `gtt.failed`, `gtt.modify_failed`, `gtt.cancel_failed`, `analyzer.error`) deliberately do **not** fire WhatsApp messages, matching the existing Telegram convention so a flood of validation rejections doesn't spam the operator's phone.
+
+`gtt.placed`, `gtt.modified` and `gtt.cancelled` fire in both Live and Analyze mode. `gtt.triggered` and `gtt.expired` are published by the sandbox GTT manager, so today they only reach you in Analyze mode: a live GTT fires at the broker, where Tradeboard does not observe the moment it triggers.
+
+The alert formatter has a dedicated layout for each order API type. GTT events do not have one yet, so they arrive under the generic `*Order Update*` heading with the mode line, strategy name and timestamp but no per-trigger detail.
+
+**Alert Format**
+
+Each alert includes:
+
+* **Strategy Name**: First line, if `strategy` was provided in the API call
+* **Mode Indicator**:
+  * `*LIVE MODE - Real Order*`: order executed with the broker
+  * `*ANALYZE MODE - No Real Order*`: sandbox / simulated order
+* **Order Details**: Symbol, action, quantity, price type, exchange, product
+* **Status**: Order ID on success, or an error line with the failure message
+* **Timestamp**: `Time: HH:MM:SS` on the last line
+
+**Example Notifications**
+
+**Live Order Placed:**
+
+```
+*Order Placed*
+Strategy: MyStrategy
+*LIVE MODE - Real Order*
+---------------------
+Symbol: RELIANCE
+Action: BUY
+Quantity: 10
+Price Type: MARKET
+Exchange: NSE
+Product: MIS
+Order ID: 250408000989443
+Time: 14:23:45
+```
+
+**Analyze (Sandbox) Mode Order:**
+
+```
+*Order Placed*
+Strategy: TestStrategy
+*ANALYZE MODE - No Real Order*
+---------------------
+Symbol: RELIANCE
+Action: BUY
+Quantity: 10
+Price Type: MARKET
+Exchange: NSE
+Product: MIS
+Order ID: ANALYZE123456
+Time: 14:23:45
+```
+
+**Configuration**
+
+* Alerts are **enabled by default** for the paired owner. No toggle is needed for the single-user case.
+* On disconnect or not-paired state, alerts are **silently dropped** (not queued). Pair from `/whatsapp` first; once the bot is connected, new order events flow normally.
+* Zero impact on order execution speed. Every alert goes through the event bus's thread pool, never on the order-placement critical path.
+
+**Requirements for Receiving Alerts**
+
+1. WhatsApp device must be paired in Tradeboard (`/whatsapp` page in the web UI).
+2. The bot must be connected. It auto-reconnects on every boot from the encrypted session blob, so in practice this means the server is up and the session is still valid.
+3. The API key on the order must resolve to the Tradeboard username recorded as `owner_username` at pair time. Orders placed by a different Tradeboard user do not alert the paired device.
+4. Orders must be placed through the Tradeboard API (REST `/api/v1/*`, the Python SDK, or any tool that ultimately hits the API).
+
+#### Sending Messages via API
+
+In addition to the automatic order alerts, you can send arbitrary WhatsApp messages from your own code through the Tradeboard REST API or the Python SDK.
+
+**Python SDK**
+
+The `whatsapp()` method ships in the `tradeboard` package. Tradeboard currently pins `tradeboard==2.0.3`.
+
+```python
+from tradeboard import api
+
+client = api(api_key="your_api_key", host="http://127.0.0.1:5000")
+
+# Send to yourself
+client.whatsapp("Build #482 deployed. P&L: +1.2%")
+
+# Send to a single number
+client.whatsapp("Order placed: BUY RELIANCE x 10", to="919876543210")
+
+# Small broadcast (max 5 recipients)
+client.whatsapp(
+    "Server maintenance in 10 minutes",
+    to=["919876543210", "919812345678", "919900112233"],
+)
+
+# Image with caption
+client.whatsapp(
+    "NIFTY end-of-day chart",
+    to="919876543210",
+    image="/srv/charts/nifty_eod.png",
+)
+
+# Document attachment
+client.whatsapp(
+    "Daily P&L report attached",
+    document="/srv/reports/eod.pdf",
+    filename="DailyPnL.pdf",
+)
+```
+
+Only `message` is positional; `to`, `username`, `image`, `document`, `caption`, `filename` and `wait_for_delivery` are keyword-only. The SDK picks the recipient field for you: `username` wins, then a list `to` becomes `phones`, then a string `to` becomes `phone`, and when you pass none of them it sends `self: true`.
+
+**REST API**
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/whatsapp/notify \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "apikey": "your_api_key",
+    "self": true,
+    "message": "Order placed: BUY RELIANCE x 10"
+  }'
+```
+
+**Sample success response:**
+
+```json
+{
+  "status": "success",
+  "message": "Delivered to 1, failed 0",
+  "data": {
+    "sent":    ["<self>"],
+    "failed":  [],
+    "skipped": 0
+  }
+}
+```
+
+**Sample not-paired response (HTTP 409):**
+
+```json
+{
+  "status": "error",
+  "message": "WhatsApp is not paired or not connected. Pair the device first from the /whatsapp page in Tradeboard before sending."
+}
+```
+
+The API refuses with HTTP 409 rather than silently queueing. A trader expects an alert to either deliver or fail loudly, not appear later out of nowhere.
+
+**Recipient Forms**
+
+Exactly one of the following must be specified. Over raw REST there is no default: a body with none of these fields is rejected with `400 Specify one of: 'self', 'username', 'phone', or 'phones'`. The Python SDK never hits that case because it fills in `self: true` when you name no recipient.
+
+| Field      | Type   | Description                                                                             |
+| ---------- | ------ | --------------------------------------------------------------------------------------- |
+| `self`     | bool   | `true` sends to the paired device's own number (the operator)                           |
+| `username` | string | Tradeboard username, resolved via the linked-users table                                  |
+| `phone`    | string | Single E.164 digit string, e.g. `"919876543210"`                                        |
+| `phones`   | array  | Up to 5 E.164 digit strings (small broadcast). Anything beyond 5 is dropped server-side |
+
+**Payload Fields**
+
+At least one of `message`, `image_path` or `document_path` is required.
+
+| Field               | Type   | Description                                                                                             |
+| ------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| `message`           | string | Text body, max 4096 characters                                                                          |
+| `image_path`        | string | Server-local path to an image (must be inside `WHATSAPP_ATTACHMENT_ROOTS`)                              |
+| `document_path`     | string | Server-local path to a document                                                                         |
+| `caption`           | string | Caption for image, or follow-up text for document                                                       |
+| `filename`          | string | Override the document's display name on the recipient device                                            |
+| `wait_for_delivery` | bool   | Default `true`. When `true`, block until WhatsApp confirms and return the per-recipient delivery report |
+
+With `wait_for_delivery` set to `false` the response is a bare acknowledgement instead, `{"status": "success", "message": "Queued for N recipient(s)", "queued": N}`, and no delivery report is produced.
+
+#### Security
+
+**Pairing Stays Inside the Web UI**
+
+The QR-scan / pair-code flow lives behind `POST /whatsapp/pair`, which is protected by the Flask **session cookie** (`@check_session_validity`). It is deliberately **not** exposed in the public REST API. An Tradeboard API key alone cannot:
+
+* Create a new paired device session
+* Wipe the existing session
+* Read or rotate `whatsapp_config`
+* List linked recipients
+* Fan out a `/broadcast` to all linked users
+* Read command stats
+
+A leaked API key can only send messages via `POST /api/v1/whatsapp/notify`, the narrowest possible surface for the trader's automation use case.
+
+**Encryption at Rest**
+
+The paired-device session blob (\~300 KB of Signal Protocol private keys, identity material, and registration info from wars/whatsapp-rust) is **Fernet-encrypted** before writing to `tradeboard.db`:
+
+* Fernet key derived via PBKDF2-SHA256 from `API_KEY_PEPPER` and `FERNET_SALT + b":whatsapp-session"` (100,000 iterations, 32-byte output)
+* The `:whatsapp-session` suffix is a domain separator. Broker auth tokens in `database/auth_db.py` derive their key from the same `API_KEY_PEPPER` with the bare `FERNET_SALT`, so the same pepper and salt pair produces two **different** Fernet keys and compromising one channel's ciphertext gives no leverage against the other. Telegram bot tokens and stored Telegram API keys (`database/telegram_db.py`) are separated further still: they derive from `API_KEY_PEPPER` with an entirely different salt, `TELEGRAM_KEY_SALT`.
+
+Compromise model:
+
+| Attacker has           | Outcome                                          |
+| ---------------------- | ------------------------------------------------ |
+| `tradeboard.db` only     | Useless, ciphertext without key                  |
+| `.env` only            | Useless, no ciphertext to decrypt                |
+| `tradeboard.db` + `.env` | Full impersonation of the linked WhatsApp device |
+
+Keep both off public hosts, off public git, and off any backup destination that mixes the two.
+
+**Owner-Only Bot Commands**
+
+Slash-commands are gated by WhatsApp's own multi-device cryptography. When the operator types `/orderbook` from their primary phone, WhatsApp marks the message as `is_from_me=True` when mirroring it to the linked Tradeboard device. Random contacts who message the operator's number arrive with `is_from_me=False`. The bot's handler unconditionally drops the latter. There is no allowlist to maintain and no `/link` flow to manage.
+
+**Attachment Path Allowlist**
+
+Image and document paths are validated server-side against:
+
+1. **Path-traversal rejection**: paths containing `..` are refused before any filesystem call
+2. **Absolute-path requirement**: relative paths are refused
+3. **Deny-list**: `/etc`, `/proc`, `/sys`, `/root`, `/var/log`, `C:\Windows`, `C:\Users\Default` are rejected outright
+4. **`WHATSAPP_ATTACHMENT_ROOTS` allowlist**: the resolved real path (one symlink hop followed) must live under one of the configured roots
+
+Rejected paths return `400 image_path is not allowed` without echoing the path back, so misuse doesn't leak the operator's filesystem layout.
+
+**Sensitive Args Scrubbed from Audit Logs**
+
+The `whatsapp_command_logs` table records every slash-command for auditability, but command args carrying credentials are replaced with `<redacted>` before write.
+
+#### Database Schema
+
+The bot uses SQLAlchemy ORM with the following tables in `tradeboard.db`:
+
+**whatsapp\_config**
+
+Singleton row (id=1) holding:
+
+* `session_blob`: Fernet-encrypted wars session bytes
+* `own_jid`, `own_phone`, `bot_username`: captured lazily after the first `is_from_me=True` message
+* `owner_user_id`, `owner_username`: captured at pair time from the Flask session
+* `is_paired`, `is_active`, `paired_at`: lifecycle state
+* `max_message_length`, `rate_limit_per_minute`, `broadcast_enabled`: operational tunables
+
+**whatsapp\_users (optional, multi-recipient)**
+
+Linked recipient phone numbers and their Tradeboard username and api\_key mapping. This table stays empty in the standard single-user deployment: there is no `/link` command on the WhatsApp bot, so rows only appear if a deployment populates them itself.
+
+**whatsapp\_command\_logs**
+
+Audit trail of every slash-command: JID, command name, scrubbed parameters, timestamp.
+
+**whatsapp\_notification\_queue**
+
+Reserved for failed-delivery retry. Single-user mode does not queue (it refuses with HTTP 409 if not paired), and the table is kept for future multi-recipient deployments.
+
+**whatsapp\_user\_preferences**
+
+Per-user notification toggles (`order_notifications`, `trade_notifications`, `pnl_notifications`, `daily_summary`, `summary_time`, `language`, `timezone`).
+
+#### Technical Architecture
+
+**Components**
+
+1. **`services/whatsapp_bot_service.py`**: `WhatsAppBotService` singleton
+   * Owns the wars (PyO3 over whatsapp-rust) instance via a dedicated `WhatsAppBotThread`. wars's `WhatsApp` class is marked `#[pyclass(unsendable)]` and panics if touched from any thread other than its creator, so all `wars.send()` calls funnel through a `queue.Queue` and are dispatched by the worker thread.
+   * Re-entrant: command handlers (which wars dispatches on the bot thread itself via `on_message`) bypass the queue via a `threading.get_ident() == self._bot_thread_id` check so they don't deadlock on themselves.
+   * Handles pair flow (temp wars instance plus `wait_until_ready` as the authoritative "paired" signal), connection lifecycle, slash-command dispatch, and SDK-backed query handlers (`/orderbook`, `/positions`, and the rest).
+2. **`services/whatsapp_alert_service.py`**: `WhatsAppAlertService`
+   * Outbound notifier. Formats order/position/batch events into plain-text WhatsApp messages with a LIVE or ANALYZE mode prefix.
+   * Single-user owner resolution: matches the event's `api_key` to a username via `auth_db.get_username_by_apikey`, then checks against `whatsapp_config.owner_username` captured at pair time. If matched, fires a self-send through wars's single-arg `send("text")` form (no need to know own JID, because wars knows its own identity internally).
+3. **`subscribers/whatsapp_subscriber.py`**: Event-bus subscriber
+   * Registered alongside `telegram_subscriber` in `subscribers/__init__.register_all()` on 22 topics: the 14 order, position, batch and analyzer topics plus the 8 GTT topics.
+   * Mirrors the Telegram convention: failure events (`order.failed`, `order.modify_failed`, `order.cancel_failed`, the three GTT failure topics, `analyzer.error`) are silently dropped.
+4. **`database/whatsapp_db.py`**: SQLAlchemy models
+   * 5 tables plus Fernet encryption helpers and an idempotent `PRAGMA table_info` migration for the `owner_user_id` and `owner_username` columns
+5. **`restx_api/whatsapp_bot.py`**: `POST /api/v1/whatsapp/notify`
+   * The only public REST endpoint. Validates recipient, payload and attachment paths, dispatches synchronously by default (`wait_for_delivery=true`) so the response carries the real delivery report.
+6. **`blueprints/whatsapp.py`**: Session-authed admin routes
+   * `/whatsapp/pair`, `/whatsapp/pair/status`, `/whatsapp/unlink`, `/whatsapp/bot/start`, `/whatsapp/bot/stop`, `/whatsapp/bot/status`, `/whatsapp/config`, `/whatsapp/users`, `/whatsapp/broadcast`, `/whatsapp/send`, `/whatsapp/test-message`, `/whatsapp/stats`
+   * All gated by `@check_session_validity` and consumed by the React `/whatsapp` page.
+7. **`frontend/src/pages/whatsapp/WhatsAppIndex.tsx`**: React admin page
+   * Pair flow with auto-rotating QR (SocketIO `whatsapp_qr` event), a Disconnect button, and a send-to-phone composer.
+8. **Auto-reconnect on app boot**: `app.py:_autostart_whatsapp_bot`
+   * Background thread spawned in `_init_databases_and_schedulers` after DB init completes
+   * If `whatsapp_config.is_paired` is true, loads the encrypted blob and starts the worker thread without operator intervention
+
+**Event Flow**
+
+```
+POST /api/v1/placeorder
+        │
+        ▼
+services/place_order_service.place_order(...)
+        │
+        ▼
+bus.publish(OrderPlacedEvent(api_key, ...))
+        │
+        ├──> log_subscriber          (writes to log/orders.jsonl)
+        ├──> socketio_subscriber     (emits order_event for the dashboard)
+        ├──> telegram_subscriber     (queues telegram_alert)
+        └──> whatsapp_subscriber     (queues whatsapp_alert)
+             │
+             ▼
+             whatsapp_alert_service.send_order_alert
+             │
+             ▼ alert_executor (5-worker thread pool)
+             whatsapp_bot_service.send_sync(to=None, text=msg)
+             │
+             ▼ enqueue on _cmd_queue
+             WhatsAppBotThread picks up the command
+             │
+             ▼
+             self._wa.send(msg)   (wars's single-arg form goes to the owner)
+             │
+             ▼
+             WhatsApp servers deliver to the operator's phone
+```
+
+**Threading Model**
+
+* The Flask app runs under Gunicorn plus eventlet (production) or the threaded dev server (development).
+* The WhatsApp bot runs on a **dedicated OS thread** (`WhatsAppBotThread`), spawned via `threading.Thread`. wars's internal Rust runtime spawns its own worker threads but routes Python callbacks back to the creator thread, satisfying PyO3's unsendable contract.
+* Outbound sends from request threads cross to the bot thread via `queue.Queue` plus `threading.Event`.
+
+#### Troubleshooting
+
+**Bot Not Sending Alerts**
+
+1. Open `/whatsapp` and verify the status badge shows **Connected**. If it shows **Not paired**, scan the QR.
+2. Check that you have an Tradeboard API key generated at `/apikey` (slash-commands need it for SDK calls).
+3. Confirm the order actually flowed through `/api/v1/placeorder` (or the SDK, a strategy, or any other API path). Orders placed directly via a broker website do NOT trigger event-bus events.
+4. Check the server logs for lines like `WhatsApp alert queued for owner user=<username> type=placeorder`. If present, the alert was dispatched.
+
+**"WhatsApp is not paired or not connected" (HTTP 409)**
+
+The bot lost its connection, typically after a long offline period, a WhatsApp protocol upgrade, or your phone being offline for many days.
+
+1. Open `/whatsapp` and re-pair if the badge says **Not paired**.
+2. If the badge says **Connected** but sends still fail, restart the Tradeboard server. Auto-reconnect rebuilds the session from the encrypted blob.
+
+**Slash Commands Don't Reply**
+
+1. Make sure you typed the command in the **"Message yourself"** chat (your own contact at the top of the chat list).
+2. Commands must start with `/` and use one of the supported names. Check `/help` for the list.
+3. Verify the Tradeboard owner has an API key on file (`/apikey` page).
+4. Check the `whatsapp_command_logs` table for the command. If it's logged, the bot received and processed it.
+
+**Attachment Path Rejected**
+
+`400 image_path is not allowed` means the path is outside the `WHATSAPP_ATTACHMENT_ROOTS` allowlist or contains a traversal token.
+
+1. Move the file to `<tradeboard>/db/attachments/` (the default allowlist), or
+2. Add the file's directory to `WHATSAPP_ATTACHMENT_ROOTS` in `.env` and restart Tradeboard.
+
+Symlinks resolving outside the allowlist are also rejected.
+
+**"WhatsApp Web is full" / Pairing Fails**
+
+WhatsApp allows up to 4 simultaneously linked devices per account. On your phone, open **Settings**, then **Linked devices**, and remove an unused one (often "WhatsApp Web on Chrome" left over from months ago).
+
+#### Environment Variables
+
+The bot respects the following environment variables:
+
+* `DATABASE_URL`: Main Tradeboard database (WhatsApp tables live here)
+* `API_KEY_PEPPER`: Encryption pepper, feeds the Fernet KDF
+* `FERNET_SALT`: Per-install random salt (auto-rotated on first boot by `utils/env_check.py`); the `:whatsapp-session` domain suffix is applied internally
+* `HOST_SERVER`: Tradeboard server URL the bot uses for SDK loopback calls (defaults to `http://127.0.0.1:5000`)
+* `WHATSAPP_ATTACHMENT_ROOTS`: Optional comma-separated allowlist for media paths. Defaults to `<tradeboard>/db/attachments/` only.
+* `WHATSAPP_RATE_LIMIT`: Optional rate limit for `POST /api/v1/whatsapp/notify`. Defaults to `30 per minute`.
+* `WHATSAPP_MESSAGE_RATE_LIMIT`: Optional rate limit for the `/whatsapp/broadcast`, `/whatsapp/send` and `/whatsapp/test-message` admin routes. Defaults to `10 per minute`.
+* `RUST_LOG`: Optional log-level filter for wars / whatsapp-rust. The default silences three known-noisy modules while keeping genuine errors visible.
+
+#### API Endpoints
+
+**Public REST API (API-key auth)**
+
+* `POST /api/v1/whatsapp/notify`: Send a message. The only public endpoint.
+
+**Session-Authed Admin (web UI only)**
+
+* `GET /whatsapp/config`: Read bot config and pair state
+* `POST /whatsapp/config`: Update operational settings (broadcast toggle, rate limit, max message length)
+* `POST /whatsapp/pair`: Start pairing flow
+* `GET /whatsapp/pair/status`: Poll pair state (alternative to SocketIO)
+* `POST /whatsapp/unlink`: Wipe the encrypted session blob
+* `POST /whatsapp/bot/start`: Connect bot using stored session
+* `POST /whatsapp/bot/stop`: Disconnect (session retained)
+* `GET /whatsapp/bot/status`: Bot lifecycle state
+* `GET /whatsapp/users`: List linked recipients (multi-recipient mode)
+* `POST /whatsapp/user/<jid>/unlink`: Unlink a recipient
+* `POST /whatsapp/broadcast`: Send to all linked users (filtered)
+* `POST /whatsapp/send`: One-off send to any number
+* `POST /whatsapp/test-message`: Send a test message to the operator
+* `GET /whatsapp/stats`: Command usage statistics
+
+**SocketIO Events (server to frontend)**
+
+* `whatsapp_qr`: Fresh QR data URL each time wars rotates the code
+* `whatsapp_pair_code`: Pair-code alternative to QR
+* `whatsapp_paired`: Pair completed successfully
+* `whatsapp_pair_status`: Full pair-state snapshot
+* `whatsapp_status`: Bot connection state changes
+
+#### Error Handling
+
+* The bot never blocks order placement: alerts fail-soft. If wars isn't ready or the worker queue times out, the send returns a failure report but the order itself is unaffected.
+* Failed sends are logged with the exception type and a redacted recipient identifier; raw paths and message bodies are never logged.
+* Slash-command handlers that raise an exception return a generic "An error occurred handling that command." reply to the operator and log the full traceback server-side.
+* HTTP 409 responses to `/api/v1/whatsapp/notify` indicate the bot isn't paired or connected. The API refuses rather than queueing so the caller sees a clear failure.
+
+#### Performance Considerations
+
+* **Worker thread isolation**: wars runs on a dedicated OS thread. Slow `wars.send` calls (WhatsApp servers throttling, slow network) do not block Flask request threads.
+* **Connection pooling**: wars maintains a single persistent WebSocket to WhatsApp servers per process.
+* **Alert pool**: Outbound notifications dispatch through a 5-worker `ThreadPoolExecutor` so a burst of order placements can fire alerts in parallel.
+* **Event bus**: In-process pub/sub with a 10-worker thread pool. The WhatsApp subscriber returns to the bus worker within microseconds (real work happens in the alert pool, then the bot thread).
+* **No polling**: wars uses WhatsApp's binary protocol over WebSocket. No HTTP polling, no rate-limit consumption on idle.
+* **Idempotent migrations**: Schema changes apply additively on every boot via `PRAGMA table_info`, so the upgrade procedure is just `git pull && uv sync && uv run app.py`.
+
+#### WhatsApp Terms of Service: Practical Risk Note
+
+Tradeboard's WhatsApp integration uses `wars`, an unofficial WhatsApp client. Unofficial clients can get the linked device unlinked, or in rare cases the entire account banned, by Meta's automation. The dominant trigger is send volume and pattern, not the client itself:
+
+* **Low risk (typical Tradeboard usage)**: A handful of self-send order alerts per day, occasional `/status` replies, sending charts or reports to a small circle of subscribers. Indistinguishable from a person using WhatsApp normally, and well under Meta's automated thresholds.
+* **Medium risk**: Sending to dozens of distinct contacts who haven't messaged you first, frequent broadcasts, sending the same body to many recipients in a short window.
+* **High risk (don't)**: Bulk marketing, cold outreach to scraped numbers, evading rate limits. This is what triggers bans. Use the official WhatsApp Business / Cloud API for those use cases.
+
+The 5-recipient cap on `phones[]` broadcasts is a deliberate ToS-safety guardrail. Treat your paired session as sensitive: it contains the private keys for your linked device.
+
+#### Future Enhancements
+
+* [ ] Chart generation (intraday / daily / both), matching the Telegram bot's `/chart` command
+* [ ] Confirmation prompts before `/closeall`, matching the Telegram bot's inline-button flow
+* [ ] A dedicated alert layout for GTT events instead of the generic `*Order Update*` heading
+* [ ] Per-recipient notification preferences (currently single-user)
+* [ ] Inline reply buttons (a WhatsApp Business-only feature; would require a separate Business API path)
+* [ ] Voice-note replies via Whisper transcription
+* [ ] Daily P\&L auto-summary scheduler
+
+#### Support
+
+For issues or questions:
+
+1. Check the server logs (`log/tradeboard_YYYY-MM-DD.log` plus `log/errors.jsonl`)
+2. Open `/whatsapp` and inspect the status badge and pair-state JSON via `GET /whatsapp/pair/status`
+3. Verify wars is installed: `uv run python -c "import wars; print(wars.__version__)"`. Tradeboard pins `wars==0.1.4`
+4. Review this documentation
+5. Contact Tradeboard support
+
+***
+
+## Agent Instructions: Querying This Documentation
+
+If you need additional information that is not directly available in this page, you can query the documentation dynamically by asking a question.
+
+Perform an HTTP GET request on the current page URL with the `ask` query parameter:
+
+```
+GET https://docs.algo.wesoftcorp.com/trading-platform/whatsapp.md?ask=<question>
+```
+
+The question should be specific, self-contained, and written in natural language. The response will contain a direct answer to the question and relevant excerpts and sources from the documentation.
+
+Use this mechanism when the answer is not explicitly present in the current page, you need clarification or additional context, or you want to retrieve related documentation sections.

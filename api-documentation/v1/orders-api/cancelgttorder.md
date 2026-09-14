@@ -1,0 +1,87 @@
+# CancelGTTOrder
+
+Cancel an active GTT trigger by its `trigger_id`. Cancelling an OCO removes both legs atomically.
+
+## Endpoint URL
+
+```http
+Local Host   :  POST http://127.0.0.1:5000/api/v1/cancelgttorder
+Ngrok Domain :  POST https://<your-ngrok-domain>.ngrok-free.app/api/v1/cancelgttorder
+Custom Domain:  POST https://<your-custom-domain>/api/v1/cancelgttorder
+```
+
+## Sample API Request
+
+```json
+{
+  "apikey": "<your_app_apikey>",
+  "strategy": "My GTT Strategy",
+  "trigger_id": "23132604291205"
+}
+```
+
+## Sample cURL Request
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/v1/cancelgttorder \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "apikey": "<your_app_apikey>",
+  "strategy": "My GTT Strategy",
+  "trigger_id": "23132604291205"
+}'
+```
+
+## Sample API Response
+
+```json
+{
+  "status": "success",
+  "trigger_id": "23132604291205"
+}
+```
+
+## Request Body
+
+| Parameter | Description | Mandatory/Optional | Default Value |
+|-----------|-------------|--------------------|---------------|
+| apikey | Your Tradeboard API key | Mandatory | - |
+| strategy | Strategy identifier (used in event logs) | Mandatory | - |
+| trigger_id | Active trigger ID returned by `PlaceGTTOrder` | Mandatory | - |
+
+`CancelGTTOrderSchema` declares exactly these three fields and all three are required. Unlike the GTT place and modify schemas, it does not drop unknown fields: any additional key returns HTTP 400.
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | `"success"` or `"error"` |
+| trigger_id | string | Cancelled trigger ID |
+| message | string | Error message (on failure) |
+
+## Notes
+
+- Only **active** GTTs can be cancelled. Already-triggered, expired, or previously cancelled GTTs cannot be cancelled again.
+- Cancelling an **OCO** removes both legs (stoploss + target) atomically. There is no per-leg cancel.
+- Cancellation is broker-side; once acknowledged, the trigger is removed and won't appear in subsequent default `GTTOrderBook` calls, which list active triggers only; send `status: all` to see it in the history as `cancelled`.
+- **Idempotency**: cancelling an already-cancelled trigger returns the broker's native response, which may be either `success` or an error like "Trigger not found" depending on the broker.
+- **Analyzer (sandbox) mode** cancels the sandbox trigger, releases its reserved margin and answers with `"mode": "analyze"`. Cancelling a trigger that is no longer active is a 404: `No active GTT with trigger_id '...'`.
+
+## Error Scenarios
+
+| Error | Cause |
+|-------|-------|
+| `trigger_id is required` (400) | Missing or empty `trigger_id` |
+| `Invalid tradeboard apikey` (403) | Bad / unrecognised API key |
+| `GTT orders are not supported for broker 'X' yet` (501) | Broker doesn't ship a `gtt_api` module |
+| `Failed to cancel GTT` (4xx/5xx) | Broker rejected, usually because the trigger is no longer active |
+
+## Related Endpoints
+
+- [PlaceGTTOrder](./placegttorder.md): Place a new GTT trigger
+- [ModifyGTTOrder](./modifygttorder.md): Modify an active GTT
+- [GTTOrderBook](./gttorderbook.md): List active GTT triggers
+
+---
+
+**Back to**: [API Documentation](../README.md)
