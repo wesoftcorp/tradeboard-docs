@@ -7,11 +7,11 @@ Tradeboard is community supported. There is no vendor helpdesk and no paid suppo
 | Channel | Use it for | Link |
 | --- | --- | --- |
 | Discord | Questions, setup problems, strategy discussion, release news | [https://www.tradeboard.in/discord](https://www.tradeboard.in/discord) |
-| GitHub Issues | Reproducible bugs and feature requests | [github.com/marketcalls/tradeboard/issues](https://github.com/wesoftcorp/tradeboard-docs/issues) |
-| GitHub Discussions | Open-ended questions that are not bugs | [github.com/marketcalls/tradeboard/discussions](https://github.com/wesoftcorp/tradeboard-docs/discussions) |
+| GitHub Issues | Reproducible bugs and feature requests | [github.com/wesoftcorp/tradeboard-docs/issues](https://github.com/wesoftcorp/tradeboard-docs/issues) |
+| GitHub Discussions | Open-ended questions that are not bugs | [github.com/wesoftcorp/tradeboard-docs/discussions](https://github.com/wesoftcorp/tradeboard-docs/discussions) |
 | X (Twitter) | Announcements | [@tradeboardHQ](https://twitter.com/tradeboardHQ) |
 
-**Security issues are the exception.** Do not report a vulnerability in a public channel. Email `rajandran@tradeboard.in` instead, as described in the repository's `SECURITY.md`.
+**Security issues are the exception.** Do not report a vulnerability in a public channel. Email `rajeev.upadhyay@live.in` instead, as described in the repository's `SECURITY.md`.
 
 ### Community Guidelines
 

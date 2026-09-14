@@ -9,7 +9,7 @@ This script provides a simplified, automated installation of Tradeboard using Do
 #### One-Line Installation
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/refs/heads/main/install/install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
 ```
 
 #### Prerequisites
@@ -30,7 +30,7 @@ usermod -aG sudo tradeboard
 su - tradeboard
 
 # Download and run the script
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 ```
@@ -39,7 +39,7 @@ chmod +x install-docker.sh
 
 ```bash
 # Download and run directly
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 # (Confirm when prompted to proceed as root)

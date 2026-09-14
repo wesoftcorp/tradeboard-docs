@@ -49,15 +49,15 @@ sudo systemctl restart tradeboard1
 CI publishes a multi-architecture image (amd64 and arm64) on every push to
 `main`:
 
-* [`marketcalls/tradeboard`](https://hub.docker.com/r/marketcalls/tradeboard) on Docker Hub
-* `marketcalls/tradeboard:latest`, the current `main`
-* `marketcalls/tradeboard:<commit-sha>`, every build, so you can pin or roll back to an exact version
+* [`wesoftcorp/tradeboard-docs`](https://hub.docker.com/r/wesoftcorp/tradeboard-docs) on Docker Hub
+* `wesoftcorp/tradeboard-docs:latest`, the current `main`
+* `wesoftcorp/tradeboard-docs:<commit-sha>`, every build, so you can pin or roll back to an exact version
 
 **Which upgrade path applies to you depends on how you installed:**
 
 | Install method | Image source | Upgrade |
 | --- | --- | --- |
-| `docker-run.sh` (Desktop) | Pulls `marketcalls/tradeboard:latest` | `./docker-run.sh pull` then `./docker-run.sh restart` |
+| `docker-run.sh` (Desktop) | Pulls `wesoftcorp/tradeboard-docs:latest` | `./docker-run.sh pull` then `./docker-run.sh restart` |
 | `install-docker.sh` (custom domain) | **Builds locally** from the repo | `git pull` then rebuild, Option 2a |
 | `install-docker-multi-custom-ssl.sh` | **Builds locally** per instance | Re-run the installer in update mode, Option 2b |
 | Manual clone | **Builds locally** | Option 2 |
@@ -181,7 +181,7 @@ Edit `docker-compose.yaml` in your install directory:
 ```yaml
 services:
   tradeboard:
-    image: marketcalls/tradeboard:latest    # was: tradeboard:latest
+    image: wesoftcorp/tradeboard-docs:latest    # was: tradeboard:latest
     # build:                              # comment out or delete this block
     #   context: .
     #   dockerfile: Dockerfile
@@ -199,7 +199,7 @@ sudo docker compose up -d
 rollback immediate and unambiguous:
 
 ```yaml
-    image: marketcalls/tradeboard:a1b2c3d    # a specific commit SHA
+    image: wesoftcorp/tradeboard-docs:a1b2c3d    # a specific commit SHA
 ```
 
 ```bash

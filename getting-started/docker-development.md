@@ -12,7 +12,7 @@ This guide covers running Tradeboard in Docker on your own machine. Tradeboard s
 
 | Approach | Command | When to use |
 | --- | --- | --- |
-| Pre-built image | `install/docker-run.sh` (or `install\docker-run.bat` on Windows) | You just want Tradeboard running. Pulls `marketcalls/tradeboard:latest`, no build step. |
+| Pre-built image | `install/docker-run.sh` (or `install\docker-run.bat` on Windows) | You just want Tradeboard running. Pulls `wesoftcorp/tradeboard-docs:latest`, no build step. |
 | Build from source | `docker compose up -d --build` | You are changing the code and want your changes in the image. |
 
 The rest of this page covers the build-from-source path.

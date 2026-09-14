@@ -73,7 +73,7 @@ ssh user@your_server_ip
 mkdir -p ~/tradeboard-install
 cd ~/tradeboard-install
 
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/main/install/install.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/main/install/install.sh
 chmod +x install.sh
 ```
 
@@ -121,7 +121,7 @@ The Nginx vhost name `tradeboard.conf` is intentionally fixed, `install/change-d
 The default `install.sh` is single-deploy per server. If you need 2+ Tradeboard instances side by side (different broker per instance, etc.), use the dedicated multi-deploy installer:
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/main/install/install-multi.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/main/install/install-multi.sh
 chmod +x install-multi.sh
 sudo ./install-multi.sh
 ```
@@ -248,7 +248,7 @@ The MCP URL to give your AI client is the same as your dashboard URL with `/mcp`
     ```bash
     cd ~/tradeboard-install
     rm -f install.sh
-    wget https://raw.githubusercontent.com/marketcalls/tradeboard/main/install/install.sh
+    wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/main/install/install.sh
     chmod +x install.sh
     sudo ./install.sh
     ```
@@ -288,7 +288,7 @@ ls /var/python/tradeboard-flask/
 
 ```bash
 cd ~/tradeboard-install
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/main/install/update.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/main/install/update.sh
 chmod +x update.sh
 sudo ./update.sh
 ```
@@ -301,7 +301,7 @@ It detects the single-deploy layout at `/var/python/tradeboard` first and falls 
 
 ```bash
 cd ~/tradeboard-install
-wget https://raw.githubusercontent.com/marketcalls/tradeboard/main/install/change-domain.sh
+wget https://raw.githubusercontent.com/wesoftcorp/tradeboard-docs/main/install/change-domain.sh
 chmod +x change-domain.sh
 sudo ./change-domain.sh
 ```
@@ -344,7 +344,7 @@ The script updates `.env` (`HOST_SERVER`, `WEBSOCKET_URL`), the Nginx vhost's `s
 
 #### Support
 
-* GitHub: [github.com/marketcalls/tradeboard](https://github.com/wesoftcorp/tradeboard-docs)
+* GitHub: [github.com/wesoftcorp/tradeboard-docs](https://github.com/wesoftcorp/tradeboard-docs)
 * Documentation: [docs.algo.wesoftcorp.com](https://docs.algo.wesoftcorp.com)
 * Discord: [tradeboard.in/discord](https://www.tradeboard.in/discord)
 

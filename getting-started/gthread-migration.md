@@ -8,7 +8,7 @@ Tradeboard is moving off the **eventlet** worker and onto Gunicorn's threaded **
 If you upgrade and do nothing, Tradeboard continues to run on eventlet exactly as before. Only set the variable described below if you are willing to test and report results.
 :::
 
-**Branch:** [github.com/marketcalls/tradeboard/tree/gthread](https://github.com/wesoftcorp/tradeboard-docs/tree/gthread)
+**Branch:** [github.com/wesoftcorp/tradeboard-docs/tree/gthread](https://github.com/wesoftcorp/tradeboard-docs/tree/gthread)
 **Discussion and reports:** [issue #1722](https://github.com/wesoftcorp/tradeboard-docs/issues/1722)
 
 ***

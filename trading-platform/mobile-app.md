@@ -2,7 +2,7 @@
 
 **Tradeboard Terminal** is a Flutter mobile trading app that connects to your own Tradeboard server. It is a **frontend only** application: it holds no broker credentials of its own, stores no data centrally, and talks exclusively to the server URL and API key you give it.
 
-* Repository: [marketcalls/tradeboard-mobile](https://github.com/wesoftcorp/tradeboard-mobile)
+* Repository: [wesoftcorp/tradeboard-docs-mobile](https://github.com/wesoftcorp/tradeboard-mobile)
 * Built with Flutter and Dart
 * Platforms: Android and Web
 * Licence: AGPL-3.0

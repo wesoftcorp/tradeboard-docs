@@ -12,7 +12,7 @@ Install the skills into your project using [npx skills](https://github.com/verce
 
 ```bash
 # GitHub shorthand
-npx skills add marketcalls/tradeboard-indicator-skills
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills
 
 # Full GitHub URL
 npx skills add https://github.com/wesoftcorp/tradeboard-indicator-skills
@@ -21,24 +21,24 @@ npx skills add https://github.com/wesoftcorp/tradeboard-indicator-skills
 Install a specific skill only:
 
 ```bash
-npx skills add marketcalls/tradeboard-indicator-skills -s indicator-chart
-npx skills add marketcalls/tradeboard-indicator-skills -s custom-indicator
-npx skills add marketcalls/tradeboard-indicator-skills -s indicator-dashboard
-npx skills add marketcalls/tradeboard-indicator-skills -s indicator-scanner
-npx skills add marketcalls/tradeboard-indicator-skills -s live-feed
-npx skills add marketcalls/tradeboard-indicator-skills -s indicator-setup
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s indicator-chart
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s custom-indicator
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s indicator-dashboard
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s indicator-scanner
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s live-feed
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -s indicator-setup
 ```
 
 List available skills before installing:
 
 ```bash
-npx skills add marketcalls/tradeboard-indicator-skills -l
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -l
 ```
 
 Install globally (available across all projects):
 
 ```bash
-npx skills add marketcalls/tradeboard-indicator-skills -g
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills -g
 ```
 
 #### Supported AI Coding Agents
@@ -136,7 +136,7 @@ Install any supported AI coding agent. For example:
 Then install the skills:
 
 ```bash
-npx skills add marketcalls/tradeboard-indicator-skills
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills
 ```
 
 #### 2. Data Source Setup

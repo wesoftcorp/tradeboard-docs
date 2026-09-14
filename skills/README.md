@@ -21,8 +21,8 @@ Two related packages are not documented here but exist in the ecosystem: `tradeb
 All packages install through [skills.sh](https://github.com/vercel-labs/skills), which detects the agents on your machine and writes each skill into the directory that agent reads:
 
 ```bash
-npx skills add marketcalls/tradeboard-skills
-npx skills add marketcalls/tradeboard-indicator-skills
+npx skills add wesoftcorp/tradeboard-docs-skills
+npx skills add wesoftcorp/tradeboard-docs-indicator-skills
 npx skills add marketcalls/vectorbt-backtesting-skills
 ```
 

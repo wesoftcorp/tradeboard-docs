@@ -1146,8 +1146,8 @@ We value all contributions! Contributors will be:
 
 ### Quick Reference Links
 
-* **Repository**: [github.com/marketcalls/tradeboard](https://github.com/wesoftcorp/tradeboard-docs)
-* **Issue Tracker**: [github.com/marketcalls/tradeboard/issues](https://github.com/wesoftcorp/tradeboard-docs/issues)
+* **Repository**: [github.com/wesoftcorp/tradeboard-docs](https://github.com/wesoftcorp/tradeboard-docs)
+* **Issue Tracker**: [github.com/wesoftcorp/tradeboard-docs/issues](https://github.com/wesoftcorp/tradeboard-docs/issues)
 * **Documentation**: [docs.algo.wesoftcorp.com](https://docs.algo.wesoftcorp.com)
 * **Discord**: [discord.com/invite/UPh7QPsNhP](https://discord.com/invite/UPh7QPsNhP)
 * **PyPI Package**: [pypi.org/project/tradeboard](https://pypi.org/project/tradeboard)

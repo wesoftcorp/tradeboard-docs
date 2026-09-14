@@ -12,7 +12,7 @@ Install the skill into your project using [npx skills](https://github.com/vercel
 
 ```bash
 # GitHub shorthand
-npx skills add marketcalls/tradeboard-skills
+npx skills add wesoftcorp/tradeboard-docs-skills
 
 # Full GitHub URL
 npx skills add https://github.com/wesoftcorp/tradeboard-skills
@@ -21,19 +21,19 @@ npx skills add https://github.com/wesoftcorp/tradeboard-skills
 Install the bundled skill explicitly:
 
 ```bash
-npx skills add marketcalls/tradeboard-skills -s tradeboard
+npx skills add wesoftcorp/tradeboard-docs-skills -s tradeboard
 ```
 
 List available skills before installing:
 
 ```bash
-npx skills add marketcalls/tradeboard-skills -l
+npx skills add wesoftcorp/tradeboard-docs-skills -l
 ```
 
 Install globally (available across all projects):
 
 ```bash
-npx skills add marketcalls/tradeboard-skills -g
+npx skills add wesoftcorp/tradeboard-docs-skills -g
 ```
 
 **Supported AI Coding Agents**
@@ -162,7 +162,7 @@ Install any supported AI coding agent. For example:
 Then install the skill:
 
 ```bash
-npx skills add marketcalls/tradeboard-skills
+npx skills add wesoftcorp/tradeboard-docs-skills
 ```
 
 **2. Tradeboard Instance**

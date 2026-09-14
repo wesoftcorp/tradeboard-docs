@@ -5,7 +5,7 @@
 To install the Tradeboard Go library, use go get:
 
 ```bash
-go get github.com/marketcalls/tradeboard-go
+go get github.com/wesoftcorp/tradeboard-docs-go
 ```
 
 #### Get the Tradeboard apikey
@@ -23,7 +23,7 @@ package main
 
 import (
     "fmt"
-    "github.com/marketcalls/tradeboard-go/tradeboard"
+    "github.com/wesoftcorp/tradeboard-docs-go/tradeboard"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 #### Check Tradeboard Version
 
 ```go
-import "github.com/marketcalls/tradeboard-go/tradeboard"
+import "github.com/wesoftcorp/tradeboard-docs-go/tradeboard"
 
 fmt.Println("Tradeboard version:", tradeboard.Version)
 ```
@@ -1596,7 +1596,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/marketcalls/tradeboard-go/tradeboard"
+    "github.com/wesoftcorp/tradeboard-docs-go/tradeboard"
 )
 
 func main() {
@@ -1637,7 +1637,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/marketcalls/tradeboard-go/tradeboard"
+    "github.com/wesoftcorp/tradeboard-docs-go/tradeboard"
 )
 
 func main() {
@@ -1672,7 +1672,7 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/marketcalls/tradeboard-go/tradeboard"
+    "github.com/wesoftcorp/tradeboard-docs-go/tradeboard"
 )
 
 func main() {
