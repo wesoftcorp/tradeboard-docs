@@ -1733,8 +1733,8 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under open-source software license.',
-      copyright: 'Copyright © 2026 Rajeev Upadhyay | Tradeboard. All rights reserved.'
+      message: 'Released under open-source software license. Powered by <a href="https://rajeevupadhyay.com" target="_blank" rel="noopener noreferrer">rajeevupadhyay.com</a>',
+      copyright: 'Copyright &copy; 2026 <a href="https://rajeevupadhyay.com" target="_blank" rel="noopener noreferrer">Rajeev Upadhyay</a> | Tradeboard. All rights reserved.'
     }
   }
 })
